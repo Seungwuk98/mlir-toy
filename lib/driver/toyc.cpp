@@ -6,6 +6,5 @@
 int main() {
   std::cout << 1 << '\n';
   llvm::errs() << 1 << '\n';
-  mlir::MLIRContext context;
   toy::ToyContext toyContext;
 }

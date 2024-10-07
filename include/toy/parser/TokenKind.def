@@ -1,0 +1,37 @@
+#ifndef TOKEN
+#define TOKEN(ID)
+#endif // TOKEN
+
+#ifndef KEYWORD
+#define KEYWORD(ID) TOKEN(ID)
+#endif // KEYWORD
+
+TOKEN(unknown)
+TOKEN(lparen)
+TOKEN(rparen)
+TOKEN(lbrace)
+TOKEN(rbrace)
+TOKEN(lbracket)
+TOKEN(rbracket)
+TOKEN(lt)
+TOKEN(gt)
+TOKEN(plus)
+TOKEN(minus)
+TOKEN(star)
+TOKEN(slash)
+TOKEN(equal)
+TOKEN(comma)
+TOKEN(semicolon)
+
+TOKEN(number)
+TOKEN(identifier)
+
+KEYWORD(var)
+KEYWORD(def)
+KEYWORD(print)
+KEYWORD(return)
+
+TOKEN(EOF)
+
+#undef KEYWORD
+#undef TOKEN

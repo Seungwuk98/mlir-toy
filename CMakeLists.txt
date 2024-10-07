@@ -13,6 +13,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/AST/include)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 include_directories(${LLVM_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_BINARY_DIR}/include)
 
 add_subdirectory(lib)
+add_subdirectory(include)
