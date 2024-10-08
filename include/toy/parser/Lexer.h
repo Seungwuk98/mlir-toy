@@ -3,17 +3,21 @@
 
 #include "toy/context/ToyContext.h"
 #include "toy/parser/Token.h"
+#include "toy/reporter/DiagnosticReporter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
 
 namespace toy {
 
 class Lexer {
 public:
-  Lexer(llvm::StringRef buffer, ToyContext *context, llvm::SourceMgr &srcMgr)
-      : Buffer(buffer), context(context), srcMgr(srcMgr) {}
+  Lexer(llvm::StringRef buffer, ToyContext *context, llvm::SourceMgr &srcMgr,
+        DiagnosticReporter &diagReporter)
+      : Buffer(buffer), context(context), srcMgr(srcMgr),
+        diagReporter(diagReporter) {}
 
   Token *GetNextToken();
   Token *PeekNextToken(unsigned lookAt = 0);
@@ -23,8 +27,27 @@ public:
   llvm::ArrayRef<Token *> getTokenStream() const { return TokenStream; }
   llvm::SourceMgr &getSourceMgr() { return srcMgr; }
   ToyContext *getContext() { return context; }
+  DiagnosticReporter &getReporter() { return diagReporter; }
 
   static constexpr char eof = '\0';
+
+  struct Reporter {
+    enum Diag {
+#define DIAG(ID, ...) ID,
+#include "toy/parser/LexerDiagnostic.def"
+    };
+
+    static llvm::SourceMgr::DiagKind getDiagKind(Diag diag);
+    static llvm::StringLiteral getDiagMsg(Diag diag);
+  };
+
+  template <typename... Args>
+  void Report(llvm::SMRange loc, Reporter::Diag diag, Args &&...args) {
+    auto diagKind = Reporter::getDiagKind(diag);
+    llvm::StringRef msg = Reporter::getDiagMsg(diag);
+    auto evaledMsg = llvm::formatv(msg.data(), std::forward<Args>(args)...);
+    diagReporter.Report(loc, diagKind, evaledMsg.str());
+  }
 
 private:
   void capture();
@@ -56,6 +79,7 @@ private:
 
   ToyContext *context;
   llvm::SourceMgr &srcMgr;
+  DiagnosticReporter &diagReporter;
 };
 
 } // namespace toy

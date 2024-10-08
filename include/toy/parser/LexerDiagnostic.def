@@ -1,0 +1,8 @@
+#ifndef DIAG
+#define DIAG(ID, Kind, Msg)
+#endif
+
+DIAG(err_unmatched_paren, Error, "Unmatched parenthesis")
+DIAG(err_unlexable_char, Error, "Unlexable character : {0}")
+
+#undef DIAG

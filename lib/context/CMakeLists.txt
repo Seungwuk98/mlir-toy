@@ -4,4 +4,10 @@ add_library(
   ToyContext.cpp
 )
 
+target_link_libraries(
+  ToyContext
+  PRIVATE 
+  ToyAST
+)
+
 

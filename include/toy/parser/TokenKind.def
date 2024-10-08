@@ -30,6 +30,7 @@ KEYWORD(var)
 KEYWORD(def)
 KEYWORD(print)
 KEYWORD(return)
+KEYWORD(transpose)
 
 TOKEN(EOF)
 

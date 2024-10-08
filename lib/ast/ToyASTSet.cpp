@@ -1,7 +1,10 @@
 #include "toy/ast/ToyASTSet.h"
 #include "ast/ASTBuilder.h"
+#include "ast/ASTTypeID.h"
 #include "toy/ast/ToyExpr.h"
 #include "toy/ast/ToyStmt.h"
+
+DEFINE_TYPE_ID(::toy::ToyASTSet)
 
 namespace toy {
 

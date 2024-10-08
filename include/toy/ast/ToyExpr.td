@@ -21,4 +21,8 @@ def ToyAST_FunctionCall : ToyExpr {
 
 def ToyAST_Identifier : ToyExpr { let treeMember = (ins String : $name); }
 
+def ToyAST_Transpose : ToyExpr { let treeMember = (ins Expr : $target); }
+
+def ToyAST_Print : ToyExpr { let treeMember = (ins Expr : $target); }
+
 #endif // TOY_EXPR_TD

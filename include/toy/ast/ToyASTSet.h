@@ -2,6 +2,7 @@
 #define TOY_AST_SET_H
 
 #include "ast/ASTSet.h"
+#include "ast/ASTTypeID.h"
 
 namespace toy {
 
@@ -15,5 +16,7 @@ public:
 };
 
 } // namespace toy
+
+DECLARE_TYPE_ID(::toy::ToyASTSet)
 
 #endif // TOY_AST_SET_H

@@ -1,5 +1,6 @@
 #include "toy/parser/Lexer.h"
 #include <llvm-18/llvm/ADT/StringSwitch.h>
+#include <llvm-18/llvm/Support/SourceMgr.h>
 
 namespace toy {
 
@@ -28,8 +29,8 @@ void Lexer::capture() {
 Token *Lexer::create() const {
   auto symbol = Buffer.slice(lastFixedPos, Pos);
   auto range =
-      llvm::SMRange(llvm::SMLoc::getFromPointer(symbol.data() + lastFixedPos),
-                    llvm::SMLoc::getFromPointer(symbol.data() + Pos));
+      llvm::SMRange(llvm::SMLoc::getFromPointer(Buffer.data() + lastFixedPos),
+                    llvm::SMLoc::getFromPointer(Buffer.data() + Pos));
   return context->Alloc<Token>(symbol, range, TokenKind, lastFixedCol,
                                lastFixedRow, TokenStream.size());
 }
@@ -59,7 +60,10 @@ void Lexer::Lex() {
   case ')':
     TokenKind = Token::Tok_rparen;
     if (parenStack.empty() || Buffer[parenStack.back()] != '(') {
-      /// TODO report
+      Report(llvm::SMRange(
+                 llvm::SMLoc::getFromPointer(Buffer.data() + lastFixedPos),
+                 llvm::SMLoc::getFromPointer(Buffer.data() + Pos)),
+             Reporter::Diag::err_unmatched_paren);
     } else {
       parenPairs[parenStack.back()] = lastFixedPos;
       parenStack.pop_back();
@@ -72,7 +76,10 @@ void Lexer::Lex() {
   case ']':
     TokenKind = Token::Tok_rbracket;
     if (parenStack.empty() || Buffer[parenStack.back()] != '[') {
-      /// TODO report
+      Report(llvm::SMRange(
+                 llvm::SMLoc::getFromPointer(Buffer.data() + lastFixedPos),
+                 llvm::SMLoc::getFromPointer(Buffer.data() + Pos)),
+             Reporter::Diag::err_unmatched_paren);
     } else {
       parenPairs[parenStack.back()] = lastFixedPos;
       parenStack.pop_back();
@@ -85,7 +92,10 @@ void Lexer::Lex() {
   case '}':
     TokenKind = Token::Tok_rbrace;
     if (parenStack.empty() || Buffer[parenStack.back()] != '{') {
-      /// TODO report
+      Report(llvm::SMRange(
+                 llvm::SMLoc::getFromPointer(Buffer.data() + lastFixedPos),
+                 llvm::SMLoc::getFromPointer(Buffer.data() + Pos)),
+             Reporter::Diag::err_unmatched_paren);
     } else {
       parenPairs[parenStack.back()] = lastFixedPos;
       parenStack.pop_back();
@@ -121,6 +131,11 @@ void Lexer::Lex() {
   case eof:
     TokenKind = Token::Tok_EOF;
     return;
+  case '#':
+    while (peek() != '\n' && peek() != eof)
+      advance();
+    Lex();
+    return;
   default:
     if (std::isdigit(ch)) {
       TokenKind = Token::Tok_number;
@@ -128,7 +143,10 @@ void Lexer::Lex() {
     } else if (std::isalpha(ch) || ch == '_') {
       lexIdentifierOrKeyword();
     } else {
-      /// TODO report
+      Report(llvm::SMRange(
+                 llvm::SMLoc::getFromPointer(Buffer.data() + lastFixedPos),
+                 llvm::SMLoc::getFromPointer(Buffer.data() + Pos)),
+             Reporter::Diag::err_unlexable_char, ch);
     }
   }
 }
@@ -186,6 +204,24 @@ Token *Lexer::GetNextToken(Token *token, unsigned lookAt) {
   if (token->getIndex() + lookAt >= TokenStream.size())
     return TokenStream.back();
   return TokenStream[token->getIndex() + lookAt];
+}
+
+static llvm::SourceMgr::DiagKind lexerDiagKinds[] = {
+#define DIAG(ID, Kind, Msg) llvm::SourceMgr::DK_##Kind,
+#include "toy/parser/LexerDiagnostic.def"
+};
+
+llvm::SourceMgr::DiagKind Lexer::Reporter::getDiagKind(Diag diag) {
+  return lexerDiagKinds[diag];
+}
+
+static llvm::StringLiteral lexerDiagMsgs[] = {
+#define DIAG(ID, Kind, Msg) Msg,
+#include "toy/parser/LexerDiagnostic.def"
+};
+
+llvm::StringLiteral Lexer::Reporter::getDiagMsg(Diag diag) {
+  return lexerDiagMsgs[diag];
 }
 
 } // namespace toy

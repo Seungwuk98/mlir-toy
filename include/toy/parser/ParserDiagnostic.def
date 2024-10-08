@@ -1,0 +1,12 @@
+#ifndef DIAG
+#define DIAG(ID, Kind, Msg)
+#endif
+
+DIAG(err_unparsable_token, Error, "Unparsable token : {0}")
+DIAG(err_unappropriate_shape_number, Error,
+     "Shape number can't contain `.` in number")
+DIAG(err_unexpected_token, Error, "Unexpected token. got: {0}, expected: {1}")
+DIAG(err_unexpected_function_call, Error,
+     "Left side of function call is must be a identifier")
+
+#undef DIAG

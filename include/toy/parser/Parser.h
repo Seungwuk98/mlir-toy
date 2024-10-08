@@ -6,6 +6,9 @@
 #include "toy/ast/ToyStmt.h"
 #include "toy/parser/Lexer.h"
 #include "toy/parser/Token.h"
+#include "toy/reporter/DiagnosticReporter.h"
+#include "llvm/ADT/StringRef.h"
+#include <iterator>
 
 namespace toy {
 
@@ -14,7 +17,8 @@ using ast::AST;
 class Parser {
 public:
   Parser(Lexer &lexer, llvm::SourceMgr &srcMgr)
-      : Lexer(lexer), srcMgr(srcMgr), context(lexer.getContext()) {}
+      : Lexer(lexer), srcMgr(srcMgr), context(lexer.getContext()),
+        reporter(lexer.getReporter()) {}
 
   Module Parse();
 
@@ -60,11 +64,18 @@ private:
   /// <add operation>> ::= <add operation> ((`+` | `-`) <add operation>)?
   Expr parseAddOperation();
 
-  /// <mul operation> ::= <constant> ((`*` | `/`) <constant>)?
+  /// <mul operation> ::= <function call> ((`*` | `/`) <function call>)?
   Expr parseMulOperation();
 
-  /// <constant> ::= <number> | <identifier> | `(` <expr> `)`
+  /// <function call> ::= <constant> ( `(` <expr list> `)`) ?
+  Expr parseFunctionCall();
+
+  /// <constant> ::= <number> | <identifier> | <tensor> | `(` <expr> `)`
   Expr parseConstant();
+
+  /// <builtin function> ::=
+  ///   `transpose` `(` <expr> `)`
+  Expr parseBuiltinFunction();
 
   /// <param list> ::= <identifier> (`,` <identifier>)*
   std::optional<llvm::SmallVector<llvm::StringRef>> parseParamList();
@@ -74,20 +85,41 @@ private:
 
   void recovery();
 
+  struct Reporter {
+    enum Diag {
+#define DIAG(ID, ...) ID,
+#include "toy/parser/ParserDiagnostic.def"
+    };
+
+    static llvm::SourceMgr::DiagKind getDiagKind(Diag diag);
+    static llvm::StringLiteral getDiagMsg(Diag diag);
+  };
+
+  template <typename... Args>
+  void Report(llvm::SMRange loc, Reporter::Diag diag, Args &&...args) {
+    auto kind = Reporter::getDiagKind(diag);
+    auto msg = Reporter::getDiagMsg(diag);
+    auto evaledMsg = llvm::formatv(msg.data(), std::forward<Args>(args)...);
+    reporter.Report(loc, kind, evaledMsg.str());
+  }
+
 private:
   Token *Tok;
   Lexer &Lexer;
   llvm::SourceMgr &srcMgr;
   ToyContext *context;
+  DiagnosticReporter &reporter;
 };
 
 template <Token::Kind Kind> bool Parser::PeekExpect() {
-  return !Peek()->is<Kind>();
+  return Expect<Kind>(Peek());
 }
 
 template <Token::Kind Kind> bool Parser::Expect(Token *token) {
   if (!token->is<Kind>()) {
-    /// TODO report
+    Report(token->getRange(), Reporter::Diag::err_unexpected_token,
+           Token::getTokenKindName(token->getKind()),
+           Token::getTokenKindName(Kind));
     return true;
   }
   return false;
@@ -95,10 +127,9 @@ template <Token::Kind Kind> bool Parser::Expect(Token *token) {
 
 template <Token::Kind Kind> bool Parser::Consume() {
   if (PeekExpect<Kind>()) {
-    /// TODO report
     return true;
   }
-  Advance();
+  Skip();
   return false;
 }
 

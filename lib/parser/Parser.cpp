@@ -1,5 +1,10 @@
 #include "toy/parser/Parser.h"
+#include "toy/ast/ToyExpr.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include <llvm-18/llvm/ADT/StringRef.h>
+#include <llvm-18/llvm/Support/ErrorHandling.h>
+#include <llvm-18/llvm/Support/SourceMgr.h>
+#include <optional>
 
 namespace toy {
 
@@ -7,6 +12,24 @@ Token *Parser::Advance() { return Tok = Lexer.GetNextToken(); }
 void Parser::Skip() { Advance(); }
 Token *Parser::Peek(unsigned lookAt) { return Lexer.PeekNextToken(lookAt); }
 Token *Parser::PrevTok() { return Lexer.PeekPrevToken(); }
+
+Module Parser::Parse() { return parseModule(); }
+
+void Parser::recovery() {
+  while (true) {
+    auto peekTok = Peek();
+    if (peekTok->is<Token::Tok_def, Token::Tok_return, Token::Tok_var,
+                    Token::Tok_EOF>())
+      return;
+
+    if (peekTok->is<Token::Tok_semicolon>()) {
+      Skip();
+      return;
+    }
+
+    Skip();
+  }
+}
 
 Module Parser::parseModule() {
   llvm::SmallVector<Stmt> stmts;
@@ -17,6 +40,7 @@ Module Parser::parseModule() {
       fail = true;
       recovery();
     }
+    stmts.emplace_back(funDecl);
   }
 
   if (fail)
@@ -64,9 +88,10 @@ BlockStmt Parser::parseBlockStmt() {
       fail = true;
       recovery();
     }
+    stmts.emplace_back(stmt);
   }
 
-  if (!Consume<Token::Tok_rbrace>())
+  if (Consume<Token::Tok_rbrace>())
     return nullptr;
 
   if (fail)
@@ -87,6 +112,9 @@ Stmt Parser::parseStmt() {
 ReturnStmt Parser::parseReturnStmt() {
   if (Consume<Token::Tok_return>())
     return nullptr;
+
+  if (ConsumeIf<Token::Tok_semicolon>())
+    return ReturnStmt::create(context, std::nullopt);
 
   auto expr = parseExpr();
   if (!expr)
@@ -164,20 +192,56 @@ Expr Parser::parseAddOperation() {
 }
 
 Expr Parser::parseMulOperation() {
-  auto lhs = parseConstant();
+  auto lhs = parseFunctionCall();
   if (!lhs)
     return nullptr;
 
   while (Peek()->is<Token::Tok_star, Token::Tok_slash>()) {
     auto op = Advance();
 
-    auto rhs = parseConstant();
+    auto rhs = parseFunctionCall();
     if (!rhs)
       return nullptr;
 
     lhs = BinaryOp::create(context, lhs, rhs,
                            op->is<Token::Tok_star>() ? BinaryOpKind::Mul
                                                      : BinaryOpKind::Div);
+  }
+
+  return lhs;
+}
+
+Expr Parser::parseFunctionCall() {
+  auto lhs = parseConstant();
+  if (!lhs)
+    return nullptr;
+
+  while (Peek()->is<Token::Tok_lparen>()) {
+    Skip();
+
+    if (!lhs.isa<Identifier>()) {
+      Report(lhs.getLoc(), Reporter::Diag::err_unexpected_function_call);
+      return nullptr;
+    }
+    auto functionName = lhs.cast<Identifier>().getName();
+
+    llvm::SmallVector<Expr> args;
+    auto expr = parseExpr();
+    if (!expr)
+      return nullptr;
+    args.emplace_back(expr);
+    while (Peek()->is<Token::Tok_comma>()) {
+      Skip();
+      expr = parseExpr();
+      if (!expr)
+        return nullptr;
+      args.emplace_back(expr);
+    }
+
+    if (Consume<Token::Tok_rparen>())
+      return nullptr;
+
+    lhs = FunctionCall::create(context, functionName, args);
   }
 
   return lhs;
@@ -205,8 +269,134 @@ Expr Parser::parseConstant() {
     return expr;
   }
 
-  /// TODO report
+  if (peekTok->is<Token::Tok_lbracket>()) {
+    Skip();
+    llvm::SmallVector<Expr> exprs;
+
+    auto expr = parseExpr();
+    if (!expr)
+      return nullptr;
+    exprs.emplace_back(expr);
+
+    while (Peek()->is<Token::Tok_comma>()) {
+      Skip();
+      if (Peek()->is<Token::Tok_rbracket>())
+        break;
+      expr = parseExpr();
+      if (!expr)
+        return nullptr;
+      exprs.emplace_back(expr);
+    }
+
+    if (Consume<Token::Tok_rbracket>())
+      return nullptr;
+
+    return Tensor::create(context, exprs);
+  }
+
+  if (peekTok->is<Token::Tok_transpose, Token::Tok_print>()) {
+    return parseBuiltinFunction();
+  }
+
+  Report(peekTok->getRange(), Reporter::Diag::err_unparsable_token,
+         peekTok->getSymbol());
   return nullptr;
+}
+
+Expr Parser::parseBuiltinFunction() {
+  auto peekTok = Peek();
+  if (peekTok->is<Token::Tok_transpose>()) {
+    Skip();
+    if (Consume<Token::Tok_lparen>())
+      return nullptr;
+    auto expr = parseExpr();
+    if (!expr)
+      return nullptr;
+    if (Consume<Token::Tok_rparen>())
+      return nullptr;
+    return Transpose::create(context, expr);
+  }
+
+  if (peekTok->is<Token::Tok_print>()) {
+    Skip();
+    if (Consume<Token::Tok_lparen>())
+      return nullptr;
+    auto expr = parseExpr();
+    if (!expr)
+      return nullptr;
+    if (Consume<Token::Tok_rparen>())
+      return nullptr;
+    return Print::create(context, expr);
+  }
+
+  llvm_unreachable("All builtin functions are handled");
+}
+
+std::optional<llvm::SmallVector<llvm::StringRef>> Parser::parseParamList() {
+  if (Peek()->is<Token::Tok_rparen>())
+    return llvm::SmallVector<llvm::StringRef>();
+
+  llvm::SmallVector<llvm::StringRef> params;
+  if (Consume<Token::Tok_identifier>())
+    return std::nullopt;
+  params.emplace_back(Tok->getSymbol());
+
+  while (Peek()->is<Token::Tok_comma>()) {
+    Skip();
+    if (Consume<Token::Tok_identifier>())
+      return std::nullopt;
+    params.emplace_back(Tok->getSymbol());
+  }
+
+  return params;
+}
+
+std::optional<ShapeInfo> Parser::parseShapeList() {
+  if (Peek()->is<Token::Tok_gt>())
+    return ShapeInfo{};
+
+  ShapeInfo shape;
+  if (Consume<Token::Tok_number>())
+    return std::nullopt;
+  auto numberStr = Tok->getSymbol();
+  if (numberStr.contains('.')) {
+    Report(Tok->getRange(), Reporter::Diag::err_unappropriate_shape_number);
+    return std::nullopt;
+  }
+
+  shape.emplace_back(std::stoul(numberStr.str()));
+
+  while (Peek()->is<Token::Tok_comma>()) {
+    Skip();
+    if (Consume<Token::Tok_number>())
+      return std::nullopt;
+    numberStr = Tok->getSymbol();
+    if (numberStr.contains('.')) {
+      Report(Tok->getRange(), Reporter::Diag::err_unappropriate_shape_number);
+      return std::nullopt;
+    }
+    shape.emplace_back(std::stoul(numberStr.str()));
+  }
+
+  return shape;
+}
+
+static llvm::SourceMgr::DiagKind parserDiagKinds[] = {
+#define DIAG(ID, Kind, Msg) llvm::SourceMgr::DK_##Kind,
+#include "toy/parser/ParserDiagnostic.def"
+};
+
+static llvm::StringLiteral parserDiagMsg[] = {
+#define DIAG(ID, Kind, Msg) Msg,
+#include "toy/parser/ParserDiagnostic.def"
+};
+
+llvm::SourceMgr::DiagKind Parser::Reporter::getDiagKind(Diag diag) {
+  return parserDiagKinds[diag];
+}
+
+llvm::StringLiteral Parser::Reporter::getDiagMsg(Diag diag) {
+  return parserDiagMsg[diag];
 }
 
 } // namespace toy

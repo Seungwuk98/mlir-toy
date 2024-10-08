@@ -2,22 +2,29 @@
 #include "doctest/doctest.h"
 #include "toy/context/ToyContext.h"
 #include "toy/parser/Lexer.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace toy::test {
 
 static void LexTest(llvm::StringRef Program, llvm::StringRef Expected) {
   llvm::SourceMgr SM;
   ToyContext ctx;
-  Lexer Lexer(Program, &ctx, SM);
+  DiagnosticReporter Reporter(SM, llvm::errs());
+
+  auto memBuf = llvm::MemoryBuffer::getMemBuffer(Program);
+  auto bufID = SM.AddNewSourceBuffer(std::move(memBuf), {});
+  auto bufferRef = SM.getMemoryBuffer(bufID);
+
+  Lexer Lexer(bufferRef->getBuffer(), &ctx, SM, Reporter);
 
   std::string LexResult;
   llvm::raw_string_ostream SS(LexResult);
 
   Token *Tok;
-  while (!Tok->is<Token::Tok_EOF>()) {
+  do {
     Tok = Lexer.GetNextToken();
     SS << Tok->toString() << '\n';
-  }
+  } while (!Tok->is<Token::Tok_EOF>());
 
   STR_EQ(Expected, SS.str());
 }
