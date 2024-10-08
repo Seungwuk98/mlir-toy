@@ -8,5 +8,8 @@ DIAG(err_unappropriate_shape_number, Error,
 DIAG(err_unexpected_token, Error, "Unexpected token. got: {0}, expected: {1}")
 DIAG(err_unexpected_function_call, Error,
      "Left side of function call is must be a identifier")
+DIAG(err_unexpected_tensor_element, Error,
+     "Tensor element must be a number or tensor")
+DIAG(err_invalid_tensor_shape, Error, "All of elements' shape must be same")
 
 #undef DIAG

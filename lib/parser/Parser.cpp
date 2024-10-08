@@ -305,7 +305,10 @@ Expr Parser::parseConstant() {
     if (Consume<Token::Tok_rbracket>())
       return nullptr;
 
-    return Tensor::create(scope.CreateRange(), context, exprs);
+    auto tensorConst = Tensor::create(scope.CreateRange(), context, exprs);
+    if (!tensorConstantSema(tensorConst))
+      return nullptr;
+    return tensorConst;
   }
 
   if (peekTok->is<Token::Tok_transpose, Token::Tok_print>()) {
@@ -394,6 +397,43 @@ std::optional<ShapeInfo> Parser::parseShapeList() {
   }
 
   return shape;
+}
+
+bool Parser::tensorConstantSema(Tensor tensor) {
+  auto elements = tensor.getElements();
+  if (elements.empty())
+    return false;
+
+  llvm::SmallVector<std::optional<llvm::SmallVector<std::size_t>>> shape;
+  if (!llvm::all_of(elements, [&](Expr expr) {
+        if (auto childTensor = expr.dyn_cast<Tensor>()) {
+          if (!tensorConstantSema(childTensor))
+            return false;
+          shape.emplace_back(childTensor.getShapeTag());
+          return true;
+        }
+
+        if (auto childNumber = expr.dyn_cast<Number>()) {
+          shape.emplace_back(std::nullopt);
+          return true;
+        }
+
+        Report(expr.getLoc(), Reporter::Diag::err_unexpected_tensor_element);
+        return false;
+      }))
+    return false;
+
+  if (!llvm::all_equal(shape)) {
+    Report(tensor.getLoc(), Reporter::Diag::err_invalid_tensor_shape);
+    return false;
+  }
+
+  ShapeInfo tensorShape{elements.size()};
+  if (shape[0])
+    tensorShape.append(shape[0]->begin(), shape[0]->end());
+
+  tensor.setShapeTag(tensorShape);
+  return true;
 }
 
 static llvm::SourceMgr::DiagKind parserDiagKinds[] = {
