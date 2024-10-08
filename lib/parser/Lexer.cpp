@@ -119,6 +119,7 @@ void Lexer::Lex() {
     TokenKind = Token::Tok_semicolon;
     break;
   case eof:
+    TokenKind = Token::Tok_EOF;
     return;
   default:
     if (std::isdigit(ch)) {
@@ -173,7 +174,7 @@ Token *Lexer::PeekPrevToken() {
 
 void Lexer::lexToPosToken(std::size_t pos) {
   while (pos >= TokenStream.size()) {
-    if (TokenStream.back()->is<Token::Tok_EOF>())
+    if (!TokenStream.empty() && TokenStream.back()->is<Token::Tok_EOF>())
       return;
     Lex();
     TokenStream.emplace_back(create());

@@ -12,8 +12,8 @@ class ToyAST : public AST {
 public:
   using AST::AST;
 
-  void setRange(llvm::SMRange range) { this->range = range; }
-  llvm::SMRange getRange() const { return range; }
+  void setLoc(llvm::SMRange range) { this->range = range; }
+  llvm::SMRange getLoc() const { return range; }
 
 private:
   llvm::SMRange range;

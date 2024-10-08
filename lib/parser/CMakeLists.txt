@@ -5,4 +5,5 @@ add_library(ToyParser
   Parser.cpp
 )
 
-link_libraries(ToyParser PRIVATE ToyAST)
+target_link_libraries(ToyParser PRIVATE ToyAST)
+

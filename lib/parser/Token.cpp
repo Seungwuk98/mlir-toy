@@ -15,7 +15,7 @@ llvm::StringRef Token::getTokenKindName(Kind kind) {
 std::string Token::toString() const {
   std::string result;
   llvm::raw_string_ostream ss(result);
-  ss << getTokenKindName(getKind()) << " \"" << getSymbol() << "\"" << " at "
+  ss << getTokenKindName(getKind()) << " `" << getSymbol() << "`" << " at "
      << getRow() << ":" << getCol();
   return result;
 }
