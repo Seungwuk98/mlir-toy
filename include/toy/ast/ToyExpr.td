@@ -7,7 +7,10 @@ class ToyExpr : ToyAST { let parent = "::toy::Expr"; }
 
 def ToyAST_Number : ToyExpr { let treeMember = (ins String : $value); }
 
-def ToyAST_Tensor : ToyExpr { let treeMember = (ins Vector<Expr> : $elements); }
+def ToyAST_Tensor : ToyExpr {
+  let treeMember = (ins Vector<Expr> : $elements);
+  let tag = (ins ShapeInfo : $shape);
+}
 
 def BinaryOpKind : UserDefineType<"::toy::BinaryOpKind">;
 

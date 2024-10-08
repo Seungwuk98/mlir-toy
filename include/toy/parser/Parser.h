@@ -32,6 +32,23 @@ private:
   template <Token::Kind Kind> bool Consume();
   template <Token::Kind Kind> bool ConsumeIf();
 
+  struct FixLocationScope {
+    FixLocationScope(Parser &parser) : parser(parser) {
+      parser.fixedLocation.push_back(parser.Peek()->getRange().Start);
+    }
+
+    ~FixLocationScope() { parser.fixedLocation.pop_back(); }
+
+    llvm::SMRange CreateRange() {
+      auto start = parser.fixedLocation.back();
+      auto end = parser.PrevTok()->getRange().End;
+      return {start, end};
+    }
+
+  private:
+    Parser &parser;
+  };
+
   /// <module> ::= <function decl>+
   Module parseModule();
 
@@ -85,6 +102,8 @@ private:
 
   void recovery();
 
+  bool tensorConstantSema(Tensor tensor);
+
   struct Reporter {
     enum Diag {
 #define DIAG(ID, ...) ID,
@@ -109,6 +128,8 @@ private:
   llvm::SourceMgr &srcMgr;
   ToyContext *context;
   DiagnosticReporter &reporter;
+
+  llvm::SmallVector<llvm::SMLoc> fixedLocation;
 };
 
 template <Token::Kind Kind> bool Parser::PeekExpect() {

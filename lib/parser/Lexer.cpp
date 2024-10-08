@@ -187,7 +187,7 @@ Token *Lexer::PeekNextToken(unsigned lookAt) {
 
 Token *Lexer::PeekPrevToken() {
   assert(tokenPos > 0 && "No previous token");
-  return PeekNextToken(-1);
+  return TokenStream[tokenPos - 1];
 }
 
 void Lexer::lexToPosToken(std::size_t pos) {

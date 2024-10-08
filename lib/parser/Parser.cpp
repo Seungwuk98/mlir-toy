@@ -1,9 +1,9 @@
 #include "toy/parser/Parser.h"
+#include "ast/ASTWalker.h"
 #include "toy/ast/ToyExpr.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include <llvm-18/llvm/ADT/StringRef.h>
-#include <llvm-18/llvm/Support/ErrorHandling.h>
-#include <llvm-18/llvm/Support/SourceMgr.h>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 namespace toy {
@@ -32,6 +32,7 @@ void Parser::recovery() {
 }
 
 Module Parser::parseModule() {
+  FixLocationScope scope(*this);
   llvm::SmallVector<Stmt> stmts;
   bool fail = false;
   while (!Peek()->is<Token::Tok_EOF>()) {
@@ -45,10 +46,11 @@ Module Parser::parseModule() {
 
   if (fail)
     return nullptr;
-  return Module::create(context, stmts);
+  return Module::create(scope.CreateRange(), context, stmts);
 }
 
 FuncDecl Parser::parseFunctionDecl() {
+  FixLocationScope scope(*this);
   if (Consume<Token::Tok_def>())
     return nullptr;
 
@@ -73,10 +75,12 @@ FuncDecl Parser::parseFunctionDecl() {
 
   auto paramList = llvm::map_to_vector(
       *params, [](llvm::StringRef param) { return param.str(); });
-  return FuncDecl::create(context, id->getSymbol(), paramList, blockStmt);
+  return FuncDecl::create(scope.CreateRange(), context, id->getSymbol(),
+                          paramList, blockStmt);
 }
 
 BlockStmt Parser::parseBlockStmt() {
+  FixLocationScope scope(*this);
   if (Consume<Token::Tok_lbrace>())
     return nullptr;
 
@@ -96,7 +100,7 @@ BlockStmt Parser::parseBlockStmt() {
 
   if (fail)
     return nullptr;
-  return BlockStmt::create(context, stmts);
+  return BlockStmt::create(scope.CreateRange(), context, stmts);
 }
 
 Stmt Parser::parseStmt() {
@@ -110,11 +114,12 @@ Stmt Parser::parseStmt() {
 }
 
 ReturnStmt Parser::parseReturnStmt() {
+  FixLocationScope scope(*this);
   if (Consume<Token::Tok_return>())
     return nullptr;
 
   if (ConsumeIf<Token::Tok_semicolon>())
-    return ReturnStmt::create(context, std::nullopt);
+    return ReturnStmt::create(scope.CreateRange(), context, std::nullopt);
 
   auto expr = parseExpr();
   if (!expr)
@@ -123,10 +128,11 @@ ReturnStmt Parser::parseReturnStmt() {
   if (Consume<Token::Tok_semicolon>())
     return nullptr;
 
-  return ReturnStmt::create(context, expr);
+  return ReturnStmt::create(scope.CreateRange(), context, expr);
 }
 
 ExprStmt Parser::parseExprStmt() {
+  FixLocationScope scope(*this);
   auto expr = parseExpr();
   if (!expr)
     return nullptr;
@@ -134,10 +140,11 @@ ExprStmt Parser::parseExprStmt() {
   if (Consume<Token::Tok_semicolon>())
     return nullptr;
 
-  return ExprStmt::create(context, expr);
+  return ExprStmt::create(scope.CreateRange(), context, expr);
 }
 
 VarDecl Parser::parseVarDecl() {
+  FixLocationScope scope(*this);
   if (Consume<Token::Tok_var>())
     return nullptr;
 
@@ -166,12 +173,14 @@ VarDecl Parser::parseVarDecl() {
   if (Consume<Token::Tok_semicolon>())
     return nullptr;
 
-  return VarDecl::create(context, id->getSymbol(), shape, expr);
+  return VarDecl::create(scope.CreateRange(), context, id->getSymbol(), shape,
+                         expr);
 }
 
 Expr Parser::parseExpr() { return parseAddOperation(); }
 
 Expr Parser::parseAddOperation() {
+  FixLocationScope scope(*this);
   auto lhs = parseMulOperation();
   if (!lhs)
     return nullptr;
@@ -183,7 +192,7 @@ Expr Parser::parseAddOperation() {
     if (!rhs)
       return nullptr;
 
-    lhs = BinaryOp::create(context, lhs, rhs,
+    lhs = BinaryOp::create(scope.CreateRange(), context, lhs, rhs,
                            op->is<Token::Tok_plus>() ? BinaryOpKind::Add
                                                      : BinaryOpKind::Sub);
   }
@@ -192,6 +201,7 @@ Expr Parser::parseAddOperation() {
 }
 
 Expr Parser::parseMulOperation() {
+  FixLocationScope scope(*this);
   auto lhs = parseFunctionCall();
   if (!lhs)
     return nullptr;
@@ -203,7 +213,7 @@ Expr Parser::parseMulOperation() {
     if (!rhs)
       return nullptr;
 
-    lhs = BinaryOp::create(context, lhs, rhs,
+    lhs = BinaryOp::create(scope.CreateRange(), context, lhs, rhs,
                            op->is<Token::Tok_star>() ? BinaryOpKind::Mul
                                                      : BinaryOpKind::Div);
   }
@@ -212,6 +222,7 @@ Expr Parser::parseMulOperation() {
 }
 
 Expr Parser::parseFunctionCall() {
+  FixLocationScope scope(*this);
   auto lhs = parseConstant();
   if (!lhs)
     return nullptr;
@@ -241,22 +252,25 @@ Expr Parser::parseFunctionCall() {
     if (Consume<Token::Tok_rparen>())
       return nullptr;
 
-    lhs = FunctionCall::create(context, functionName, args);
+    lhs =
+        FunctionCall::create(scope.CreateRange(), context, functionName, args);
   }
 
   return lhs;
 }
 
 Expr Parser::parseConstant() {
+  FixLocationScope scope(*this);
   auto *peekTok = Peek();
   if (peekTok->is<Token::Tok_number>()) {
     Skip();
-    return Number::create(context, peekTok->getSymbol());
+    return Number::create(scope.CreateRange(), context, peekTok->getSymbol());
   }
 
   if (peekTok->is<Token::Tok_identifier>()) {
     Skip();
-    return Identifier::create(context, peekTok->getSymbol());
+    return Identifier::create(scope.CreateRange(), context,
+                              peekTok->getSymbol());
   }
 
   if (peekTok->is<Token::Tok_lparen>()) {
@@ -291,7 +305,7 @@ Expr Parser::parseConstant() {
     if (Consume<Token::Tok_rbracket>())
       return nullptr;
 
-    return Tensor::create(context, exprs);
+    return Tensor::create(scope.CreateRange(), context, exprs);
   }
 
   if (peekTok->is<Token::Tok_transpose, Token::Tok_print>()) {
@@ -304,6 +318,7 @@ Expr Parser::parseConstant() {
 }
 
 Expr Parser::parseBuiltinFunction() {
+  FixLocationScope scope(*this);
   auto peekTok = Peek();
   if (peekTok->is<Token::Tok_transpose>()) {
     Skip();
@@ -314,7 +329,7 @@ Expr Parser::parseBuiltinFunction() {
       return nullptr;
     if (Consume<Token::Tok_rparen>())
       return nullptr;
-    return Transpose::create(context, expr);
+    return Transpose::create(scope.CreateRange(), context, expr);
   }
 
   if (peekTok->is<Token::Tok_print>()) {
@@ -326,7 +341,7 @@ Expr Parser::parseBuiltinFunction() {
       return nullptr;
     if (Consume<Token::Tok_rparen>())
       return nullptr;
-    return Print::create(context, expr);
+    return Print::create(scope.CreateRange(), context, expr);
   }
 
   llvm_unreachable("All builtin functions are handled");

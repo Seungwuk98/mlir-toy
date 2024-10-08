@@ -15,8 +15,6 @@ public:
   static bool classof(AST ast);
 };
 
-using ShapeInfo = llvm::SmallVector<std::size_t>;
-
 } // namespace toy
 
 #define AST_TABLEGEN_DECL
