@@ -8,7 +8,11 @@ private:
 };
 
 ToyContext::ToyContext() : impl(new ToyContextImpl) {
+  // load AST sets
   GetOrRegisterASTSet<ToyASTSet>();
+
+  // load MLIR Dialects
+  getOrLoadDialect<ToyDialect>();
 }
 ToyContext::~ToyContext() { delete impl; }
 
