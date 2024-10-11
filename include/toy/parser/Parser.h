@@ -98,7 +98,7 @@ private:
   std::optional<llvm::SmallVector<llvm::StringRef>> parseParamList();
 
   /// <shape list> ::= <number> (`,` <number>)*
-  std::optional<llvm::SmallVector<std::uint64_t>> parseShapeList();
+  std::optional<ShapeInfo> parseShapeList();
 
   void recovery();
 

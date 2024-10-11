@@ -13,7 +13,7 @@ public:
   using AST::AST;
 };
 
-using ShapeInfo = llvm::SmallVector<std::size_t>;
+using ShapeInfo = llvm::SmallVector<std::int64_t>;
 } // namespace toy
 
 #endif // TOY_AST_H

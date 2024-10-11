@@ -11,12 +11,12 @@ namespace toy {
 void ToyASTSet::RegisterSet() {
   ast::ASTBuilder::registerAST<
 #define AST_TABLEGEN_ID_COMMA
-#include "toy/ast/ToyExpr.hpp.inc"
+#include "toy/ast/ToyExpr.h.inc"
       >(getContext());
 
   ast::ASTBuilder::registerAST<
 #define AST_TABLEGEN_ID_COMMA
-#include "toy/ast/ToyStmt.hpp.inc"
+#include "toy/ast/ToyStmt.h.inc"
       >(getContext());
 }
 

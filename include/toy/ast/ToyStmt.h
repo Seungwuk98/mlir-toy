@@ -18,6 +18,6 @@ public:
 } // namespace toy
 
 #define AST_TABLEGEN_DECL
-#include "toy/ast/ToyStmt.hpp.inc"
+#include "toy/ast/ToyStmt.h.inc"
 
 #endif // TOY_STMT_H

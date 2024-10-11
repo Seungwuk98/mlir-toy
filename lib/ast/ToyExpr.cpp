@@ -5,7 +5,7 @@ namespace toy {
 bool Expr::classof(AST ast) {
   return ast.isa<
 #define AST_TABLEGEN_ID_COMMA
-#include "toy/ast/ToyExpr.hpp.inc"
+#include "toy/ast/ToyExpr.h.inc"
       >();
 }
 

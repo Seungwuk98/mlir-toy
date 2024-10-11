@@ -393,7 +393,7 @@ std::optional<ShapeInfo> Parser::parseShapeList() {
       Report(Tok->getRange(), Reporter::Diag::err_unappropriate_shape_number);
       return std::nullopt;
     }
-    shape.emplace_back(std::stoul(numberStr.str()));
+    shape.emplace_back(std::stoll(numberStr.str()));
   }
 
   return shape;
@@ -404,7 +404,7 @@ bool Parser::tensorConstantSema(Tensor tensor) {
   if (elements.empty())
     return false;
 
-  llvm::SmallVector<std::optional<llvm::SmallVector<std::size_t>>> shape;
+  llvm::SmallVector<std::optional<ShapeInfo>> shape;
   if (!llvm::all_of(elements, [&](Expr expr) {
         if (auto childTensor = expr.dyn_cast<Tensor>()) {
           if (!tensorConstantSema(childTensor))
@@ -428,7 +428,7 @@ bool Parser::tensorConstantSema(Tensor tensor) {
     return false;
   }
 
-  ShapeInfo tensorShape{elements.size()};
+  ShapeInfo tensorShape{static_cast<int64_t>(elements.size())};
   if (shape[0])
     tensorShape.append(shape[0]->begin(), shape[0]->end());
 

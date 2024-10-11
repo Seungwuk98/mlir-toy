@@ -34,6 +34,6 @@ template <> struct detail::ASTDataHandler<toy::BinaryOpKind> {
 } // namespace ast
 
 #define AST_TABLEGEN_DECL
-#include "toy/ast/ToyExpr.hpp.inc"
+#include "toy/ast/ToyExpr.h.inc"
 
 #endif // TOY_EXPR_H

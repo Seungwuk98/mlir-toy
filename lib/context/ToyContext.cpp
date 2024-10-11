@@ -1,5 +1,6 @@
 #include "toy/context/ToyContext.h"
 #include "toy/ast/ToyASTSet.h"
+#include "toy/mlir/Dialect/ToyDialect.h"
 namespace toy {
 
 class ToyContextImpl {
@@ -12,7 +13,7 @@ ToyContext::ToyContext() : impl(new ToyContextImpl) {
   GetOrRegisterASTSet<ToyASTSet>();
 
   // load MLIR Dialects
-  getOrLoadDialect<ToyDialect>();
+  getOrLoadDialect<mlir::toy::ToyDialect>();
 }
 ToyContext::~ToyContext() { delete impl; }
 
