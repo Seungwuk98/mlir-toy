@@ -100,7 +100,7 @@ private:
   /// <shape list> ::= <number> (`,` <number>)*
   std::optional<ShapeInfo> parseShapeList();
 
-  void recovery();
+  void recovery(bool allowFunction = true);
 
   bool tensorConstantSema(Tensor tensor);
 

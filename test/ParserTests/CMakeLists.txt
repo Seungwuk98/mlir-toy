@@ -9,6 +9,7 @@ target_link_libraries(ParserTests
   ToyParser 
   ToyAST
   ToyContext
+  ToyMLIRGen
   MLIRIR
   doctest
   ${llvm_libs}

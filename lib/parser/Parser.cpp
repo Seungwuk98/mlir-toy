@@ -15,11 +15,13 @@ Token *Parser::PrevTok() { return Lexer.PeekPrevToken(); }
 
 Module Parser::Parse() { return parseModule(); }
 
-void Parser::recovery() {
+void Parser::recovery(bool allowFunction) {
   while (true) {
     auto peekTok = Peek();
-    if (peekTok->is<Token::Tok_def, Token::Tok_return, Token::Tok_var,
-                    Token::Tok_EOF>())
+    if (peekTok->is<Token::Tok_return, Token::Tok_var, Token::Tok_EOF>())
+      return;
+
+    if (allowFunction && peekTok->is<Token::Tok_def>())
       return;
 
     if (peekTok->is<Token::Tok_semicolon>()) {
@@ -90,7 +92,7 @@ BlockStmt Parser::parseBlockStmt() {
     auto stmt = parseStmt();
     if (!stmt) {
       fail = true;
-      recovery();
+      recovery(false);
     }
     stmts.emplace_back(stmt);
   }
