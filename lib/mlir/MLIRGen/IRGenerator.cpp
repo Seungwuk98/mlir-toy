@@ -146,8 +146,10 @@ void IRGenerator::visit(FuncDecl stmt) {
   auto f64TensorType = mlir::UnrankedTensorType::get(builder.getF64Type());
 
   mlir::Type returnType;
+  bool hasReturn = false;
   stmt.getBody().walk([&](AST ast) {
     if (auto stmt = ast.dyn_cast<ReturnStmt>()) {
+      hasReturn = true;
       if (stmt.getExpr())
         returnType = f64TensorType;
       return ast::WalkResult::interrupt();
@@ -176,6 +178,9 @@ void IRGenerator::visit(FuncDecl stmt) {
   }
 
   stmt.getBody().accept(*this);
+  if (!hasReturn)
+    builder.create<mlir::toy::ReturnOp>(getLoc(stmt.getLoc().End),
+                                        mlir::ValueRange{});
 }
 
 void IRGenerator::visit(VarDecl stmt) {

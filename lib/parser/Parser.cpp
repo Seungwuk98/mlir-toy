@@ -239,21 +239,22 @@ Expr Parser::parseFunctionCall() {
     auto functionName = lhs.cast<Identifier>().getName();
 
     llvm::SmallVector<Expr> args;
-    auto expr = parseExpr();
-    if (!expr)
-      return nullptr;
-    args.emplace_back(expr);
-    while (Peek()->is<Token::Tok_comma>()) {
-      Skip();
-      expr = parseExpr();
+    if (!ConsumeIf<Token::Tok_rparen>()) {
+      auto expr = parseExpr();
       if (!expr)
         return nullptr;
       args.emplace_back(expr);
+      while (Peek()->is<Token::Tok_comma>()) {
+        Skip();
+        expr = parseExpr();
+        if (!expr)
+          return nullptr;
+        args.emplace_back(expr);
+      }
+
+      if (Consume<Token::Tok_rparen>())
+        return nullptr;
     }
-
-    if (Consume<Token::Tok_rparen>())
-      return nullptr;
-
     lhs =
         FunctionCall::create(scope.CreateRange(), context, functionName, args);
   }

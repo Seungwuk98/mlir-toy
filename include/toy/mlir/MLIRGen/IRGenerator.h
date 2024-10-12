@@ -37,13 +37,17 @@ public:
   mlir::OwningOpRef<mlir::ModuleOp> getModuleOp() { return module.release(); }
 
 private:
-  mlir::Location getLoc(AST ast) {
-    auto loc = ast.getLoc().Start;
+  mlir::Location getLoc(llvm::SMLoc loc) {
     auto bufID = srcMgr.FindBufferContainingLoc(loc);
     auto lineAndCol = srcMgr.getLineAndColumn(loc, bufID);
     auto bufIdentifier = srcMgr.getMemoryBuffer(bufID)->getBufferIdentifier();
     return mlir::FileLineColLoc::get(ctx, bufIdentifier, lineAndCol.first,
                                      lineAndCol.second);
+  }
+
+  mlir::Location getLoc(AST ast) {
+    auto loc = ast.getLoc().Start;
+    return getLoc(loc);
   }
 
   ToyContext *ctx;

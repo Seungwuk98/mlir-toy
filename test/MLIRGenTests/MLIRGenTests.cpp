@@ -93,6 +93,31 @@ module {
 }
 
 )");
+
+  MLIR_GEN_TEST("Toy Simple Program 3", R"(
+def no_return_func() {
+  var a = [1, 2, 3, 4, 5, 6];
+}
+
+def main() {
+  var a<2, 3> = [1, 2, 3, 4, 5, 6];
+  no_return_func();
+}
+)",
+                R"(
+module {
+  toy.func @no_return_func() {
+    %0 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+    toy.return
+  }
+  toy.func @main() {
+    %0 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+    %1 = toy.reshape(%0 : tensor<6xf64>) to tensor<2x3xf64>
+    %2 = toy.generic_call @no_return_func() : () -> tensor<*xf64>
+    toy.return
+  }
+}
+)");
 }
 
 } // namespace toy::test
