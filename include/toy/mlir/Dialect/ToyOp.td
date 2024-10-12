@@ -260,6 +260,7 @@ def TransposeOp : Toy_Op<"transpose"> {
   ];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 #endif // TOY_OP_TD
