@@ -2,6 +2,7 @@
 #include "ast/ASTWalker.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeRange.h"
 #include "toy/ast/ToyExpr.h"
 #include "toy/ast/ToyStmt.h"
 #include "toy/mlir/Dialect/ToyOp.h"
@@ -74,7 +75,20 @@ void IRGenerator::visit(BinaryOp expr) {
 
 void IRGenerator::visit(FunctionCall expr) {
   auto callee = expr.getCallee();
+  mlir::FunctionType funcType;
+  if (auto iter = functionDeclarations.find(callee);
+      iter != functionDeclarations.end()) {
+    funcType = iter->second;
+  } else {
+    /// TODO report
+    return;
+  }
+
   auto args = expr.getArgs();
+  if (args.size() != funcType.getNumInputs()) {
+    /// TODO report
+    return;
+  }
 
   llvm::SmallVector<mlir::Value> argValues;
   argValues.reserve(args.size());
@@ -85,8 +99,12 @@ void IRGenerator::visit(FunctionCall expr) {
     argValues.emplace_back(result);
   }
 
-  result =
-      builder.create<mlir::toy::GenericCallOp>(getLoc(expr), callee, argValues);
+  if (funcType.getNumResults())
+    result = builder.create<mlir::toy::GenericCallOp>(getLoc(expr), callee,
+                                                      argValues);
+  else
+    result = builder.create<mlir::toy::GenericCallOp>(
+        getLoc(expr), mlir::TypeRange{}, callee, argValues);
 }
 
 void IRGenerator::visit(Identifier expr) {
@@ -161,6 +179,11 @@ void IRGenerator::visit(FuncDecl stmt) {
                                          f64TensorType);
   auto funcType = builder.getFunctionType(
       argTypes, returnType ? returnType : mlir::TypeRange{});
+  auto inserted = functionDeclarations.try_emplace(functionName, funcType);
+  if (!inserted.second) {
+    /// TODO report
+    return;
+  }
 
   auto funcOp =
       builder.create<mlir::toy::FuncOp>(getLoc(stmt), functionName, funcType);

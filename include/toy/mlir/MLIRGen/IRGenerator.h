@@ -2,6 +2,7 @@
 #define TOY_MLIR_IRGENERATOR_H
 
 #include "ast/ASTVisitor.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -57,6 +58,7 @@ private:
   mlir::OwningOpRef<mlir::ModuleOp> module;
 
   llvm::ScopedHashTable<llvm::StringRef, mlir::Value> symbolTable;
+  llvm::DenseMap<llvm::StringRef, mlir::FunctionType> functionDeclarations;
   mlir::Value result;
 
   using ScopeTy = llvm::ScopedHashTable<llvm::StringRef, mlir::Value>::ScopeTy;
