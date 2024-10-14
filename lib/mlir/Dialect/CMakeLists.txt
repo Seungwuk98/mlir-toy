@@ -11,4 +11,5 @@ target_link_libraries(ToyDialect
   PRIVATE 
   MLIRIR
   MLIRFunctionInterfaces
+  ToyMLIRPass
 )

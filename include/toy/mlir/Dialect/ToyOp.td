@@ -9,7 +9,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 /// ConstantOp 
 //===----------------------------------------------------------------------===//
 
-def ConstantOp : Toy_Op<"constant"> {
+def ConstantOp : Toy_Op<"constant", [Pure]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant operation";
@@ -40,7 +40,7 @@ def ConstantOp : Toy_Op<"constant"> {
 /// AddOp
 //===----------------------------------------------------------------------===//
 
-def AddOp : Toy_Op<"add"> {
+def AddOp : Toy_Op<"add", [Pure]> {
   let summary = "element-wise addition operation";
   let description = [{
     The "add" operation performs element-wise addition between two tensors.
@@ -57,11 +57,12 @@ def AddOp : Toy_Op<"add"> {
   ];
 }
 
+
 //===----------------------------------------------------------------------===// 
 /// MulOp 
 //===----------------------------------------------------------------------===// 
 
-def MulOp : Toy_Op<"mul"> {
+def MulOp : Toy_Op<"mul", [Pure]> {
   let summary = "element-wise multiplication operation";
   let description = [{
     The "mul" operation performs element-wise multiplication between two
@@ -222,7 +223,7 @@ def ReturnOp : Toy_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
 /// ReshapeOp 
 //===----------------------------------------------------------------------===// 
 
-def ReshapeOp : Toy_Op<"reshape"> {
+def ReshapeOp : Toy_Op<"reshape", [Pure]> {
   let summary = "reshape operation";
   let description = [{
     Reshape operation is transforming its input tensor into a new tensor with
@@ -239,13 +240,15 @@ def ReshapeOp : Toy_Op<"reshape"> {
   let assemblyFormat = [{
     `(` $input `:` type($input) `)` attr-dict `to` type(results) 
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===// 
 /// TransposeOp 
 //===----------------------------------------------------------------------===// 
 
-def TransposeOp : Toy_Op<"transpose"> {
+def TransposeOp : Toy_Op<"transpose", [Pure]> {
   let summary = "transpose operation";
 
   let arguments = (ins F64Tensor:$input);

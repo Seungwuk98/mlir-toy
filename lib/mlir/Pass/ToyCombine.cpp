@@ -2,6 +2,10 @@
 #include "mlir/Support/LogicalResult.h"
 #include "toy/mlir/Dialect/ToyOp.h"
 
+namespace mlir {
+#include "toy/mlir/Pass/ToyCombine.cpp.inc"
+}
+
 namespace mlir::toy {
 
 struct SimplifyRedundantTranspose : public OpRewritePattern<TransposeOp> {
@@ -23,6 +27,12 @@ struct SimplifyRedundantTranspose : public OpRewritePattern<TransposeOp> {
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<SimplifyRedundantTranspose>(context);
+}
+
+void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ReshapeReshapeOptPattern, RedundantReshapeOptPattern,
+              FoldConstantReshapeOptPattern>(context);
 }
 
 } // namespace mlir::toy
