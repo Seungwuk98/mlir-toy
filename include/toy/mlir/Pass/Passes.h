@@ -7,6 +7,8 @@ namespace mlir::toy {
 
 std::unique_ptr<mlir::Pass> createShapeInferencePass();
 
-}
+std::unique_ptr<mlir::Pass> createToyToAffineLoweringPass();
+
+} // namespace mlir::toy
 
 #endif // TOY_SHAPE_INFERENCE_H

@@ -4,7 +4,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 #include "toy/mlir/Dialect/ToyOp.h"
-#include "toy/mlir/Pass/ShapeInference.h"
+#include "toy/mlir/Pass/Passes.h"
 
 namespace toy::test {
 

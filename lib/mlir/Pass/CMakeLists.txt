@@ -3,6 +3,7 @@ add_library(
   STATIC
   ToyCombine.cpp
   ShapeInference.cpp
+  ToyToAffineLoweringPass.cpp
 ) 
 
 add_dependencies(ToyMLIRPass ToyCombineIncGen)

@@ -35,8 +35,8 @@ public:
       if (auto shapeInference = llvm::dyn_cast<ShapeInference>(op))
         shapeInference.inferShapes();
       else {
-        (*iter)->emitError("unable to infer shape of operation without shape "
-                           "inference interface");
+        op->emitError("unable to infer shape of operation without shape "
+                      "inference interface");
         return signalPassFailure();
       }
     }
