@@ -187,6 +187,8 @@ void IRGenerator::visit(FuncDecl stmt) {
 
   auto funcOp =
       builder.create<mlir::toy::FuncOp>(getLoc(stmt), functionName, funcType);
+  if (functionName != "main")
+    funcOp.setPrivate();
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&funcOp.getBlocks().front());

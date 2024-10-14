@@ -43,7 +43,7 @@ def main() {
 )",
                 R"(
 module {
-  toy.func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
+  toy.func private @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
     %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
     %1 = toy.transpose(%0 : tensor<*xf64>) to tensor<*xf64>
     toy.return %1 : tensor<*xf64>

@@ -4,6 +4,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 #include <ranges>
@@ -119,6 +121,8 @@ ParseResult AddOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void AddOp::print(OpAsmPrinter &printer) { printBinaryOp(printer, *this); }
 
+void AddOp::inferShapes() { getResult().setType(getLhs().getType()); }
+
 //===----------------------------------------------------------------------===//
 /// MulOp
 //===----------------------------------------------------------------------===//
@@ -134,6 +138,8 @@ ParseResult MulOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MulOp::print(OpAsmPrinter &printer) { printBinaryOp(printer, *this); }
+
+void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 
 //===----------------------------------------------------------------------===//
 /// FuncOp
@@ -172,6 +178,41 @@ void GenericCallOp::build(OpBuilder &builder, OperationState &odsState,
   odsState.addAttribute("callee",
                         SymbolRefAttr::get(builder.getContext(), callee));
 }
+
+CallInterfaceCallable GenericCallOp::getCallableForCallee() {
+  return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+}
+
+void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+}
+
+Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
+
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+/// CastOp
+//===----------------------------------------------------------------------===//
+
+bool CastOp::areCastCompatible(::mlir::TypeRange inputs,
+                               ::mlir::TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+
+  auto inputType = inputs.front().dyn_cast<TensorType>();
+  auto outputType = outputs.front().dyn_cast<TensorType>();
+  if (!inputType || !outputType ||
+      inputType.getElementType() != outputType.getElementType())
+    return false;
+
+  return !inputType.hasRank() || !outputType.hasRank() ||
+         inputType == outputType;
+}
+
+void CastOp::inferShapes() { getResult().setType(getInput().getType()); }
 
 //===----------------------------------------------------------------------===//
 /// ReturnOp
@@ -226,6 +267,15 @@ LogicalResult TransposeOp::verify() {
     return emitOpError(
         "expected result shape to be the transpose of the input");
   return success();
+}
+
+void TransposeOp::inferShapes() {
+  auto inputType = getOperand().getType().cast<RankedTensorType>();
+  auto resultType = RankedTensorType::get(
+      llvm::SmallVector<std::int64_t>{inputType.getShape().rbegin(),
+                                      inputType.getShape().rend()},
+      inputType.getElementType());
+  getResult().setType(resultType);
 }
 
 } // namespace mlir::toy

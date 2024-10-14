@@ -1,8 +1,10 @@
 #include "MLIRTestUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 #include "toy/mlir/Dialect/ToyOp.h"
+#include "toy/mlir/Pass/ShapeInference.h"
 
 namespace toy::test {
 
@@ -36,14 +38,18 @@ bool MLIRTest(llvm::StringRef Program,
   return CheckFn(mlirModule.get());
 }
 
+static void cmpModuleAndExpected(mlir::ModuleOp module,
+                                 llvm::StringRef Expected) {
+  std::string emittedProgram;
+  llvm::raw_string_ostream ss(emittedProgram);
+
+  module.print(ss);
+  STR_EQ(Expected, emittedProgram);
+}
+
 bool MLIRGenTest(llvm::StringRef Program, llvm::StringRef Expected) {
   return MLIRTest(Program, [&](mlir::ModuleOp module) {
-    std::string emittedProgram;
-    llvm::raw_string_ostream ss(emittedProgram);
-
-    module.print(ss);
-    STR_EQ(Expected, emittedProgram);
-
+    cmpModuleAndExpected(module, Expected);
     return true;
   });
 }
@@ -58,11 +64,42 @@ bool MLIRGenCanonicalizerPassTest(llvm::StringRef Program,
       return false;
     }
 
-    std::string emittedProgram;
-    llvm::raw_string_ostream ss(emittedProgram);
+    cmpModuleAndExpected(module, Expected);
+    return true;
+  });
+}
 
-    module.print(ss);
-    STR_EQ(Expected, emittedProgram);
+bool MLIRGenInlinePassTest(llvm::StringRef Program, llvm::StringRef Expected) {
+  return MLIRTest(Program, [&](mlir::ModuleOp module) {
+    mlir::PassManager pm(module->getName());
+    pm.addPass(mlir::createInlinerPass());
+    pm.addNestedPass<mlir::toy::FuncOp>(mlir::createCanonicalizerPass());
+    if (mlir::failed(pm.run(module))) {
+      FAIL("Failed to run mlir pass");
+      return false;
+    }
+
+    cmpModuleAndExpected(module, Expected);
+    return true;
+  });
+}
+
+bool MLIRShapeInferencePassTest(llvm::StringRef Program,
+                                llvm::StringRef Expected) {
+  return MLIRTest(Program, [&](mlir::ModuleOp module) {
+    mlir::PassManager pm(module->getName());
+    pm.addPass(mlir::createInlinerPass());
+
+    auto &fnPm = pm.nest<mlir::toy::FuncOp>();
+    fnPm.addPass(mlir::toy::createShapeInferencePass());
+    fnPm.addPass(mlir::createCanonicalizerPass());
+
+    if (mlir::failed(pm.run(module))) {
+      FAIL("Failed to run mlir pass");
+      return false;
+    }
+
+    cmpModuleAndExpected(module, Expected);
     return true;
   });
 }

@@ -17,12 +17,23 @@ bool MLIRGenTest(llvm::StringRef Program, llvm::StringRef Expected);
 bool MLIRGenCanonicalizerPassTest(llvm::StringRef Program,
                                   llvm::StringRef Expected);
 
+bool MLIRGenInlinePassTest(llvm::StringRef Program, llvm::StringRef Expected);
+
+bool MLIRShapeInferencePassTest(llvm::StringRef Program,
+                                llvm::StringRef Expected);
+
 } // namespace toy::test
 
 #define MLIR_GEN_TEST(TestName, Program, Expected)                             \
   SUBCASE(TestName) CHECK(::toy::test::MLIRGenTest(Program, Expected))
-#define MLIR_PASS_TEST(TestName, Program, Expected)                            \
+#define MLIR_CANO_PASS_TEST(TestName, Program, Expected)                       \
   SUBCASE(TestName)                                                            \
   CHECK(::toy::test::MLIRGenCanonicalizerPassTest(Program, Expected))
+#define MLIR_INLINE_PASS_TEST(TestName, Program, Expected)                     \
+  SUBCASE(TestName)                                                            \
+  CHECK(::toy::test::MLIRGenInlinePassTest(Program, Expected))
+#define MLIR_SI_PASS_TEST(TestName, Program, Expected)                         \
+  SUBCASE(TestName)                                                            \
+  CHECK(::toy::test::MLIRShapeInferencePassTest(Program, Expected))
 
 #endif // TEST_MLIR_TEST_UTILS_H

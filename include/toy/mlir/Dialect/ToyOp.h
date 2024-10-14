@@ -8,8 +8,10 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "toy/mlir/Dialect/ToyInterface.h"
 
 #define GET_OP_CLASSES
 #include "toy/mlir/Dialect/ToyOp.h.inc"
