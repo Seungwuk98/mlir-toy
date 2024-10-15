@@ -12,4 +12,7 @@ target_link_libraries(
   ToyMLIRPass 
   PRIVATE 
   MLIRTransforms
+  MLIRArithDialect
+  MLIRAffineDialect
+  MLIRFuncDialect
 )

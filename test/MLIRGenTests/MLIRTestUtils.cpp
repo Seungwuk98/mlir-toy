@@ -104,4 +104,25 @@ bool MLIRShapeInferencePassTest(llvm::StringRef Program,
   });
 }
 
+bool MLIRAffineLoweringTest(llvm::StringRef Program, llvm::StringRef Expected) {
+  return MLIRTest(Program, [&](mlir::ModuleOp module) {
+    mlir::PassManager pm(module->getName());
+    pm.addPass(mlir::createInlinerPass());
+
+    auto &fnPm = pm.nest<mlir::toy::FuncOp>();
+    fnPm.addPass(mlir::toy::createShapeInferencePass());
+    fnPm.addPass(mlir::createCanonicalizerPass());
+
+    pm.addPass(mlir::toy::createToyToAffineLoweringPass());
+    if (mlir::failed(pm.run(module))) {
+      module.dump();
+      FAIL("Failed to run mlir pass");
+      return false;
+    }
+
+    cmpModuleAndExpected(module, Expected);
+    return true;
+  });
+}
+
 } // namespace toy::test
