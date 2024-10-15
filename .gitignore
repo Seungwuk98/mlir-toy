@@ -1,3 +1,4 @@
 build/
 .cache/
 compile_commands.json
+tablegen_compile_commands.yml
