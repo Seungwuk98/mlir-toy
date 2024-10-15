@@ -4,6 +4,7 @@ add_library(
   ToyCombine.cpp
   ShapeInference.cpp
   ToyToAffineLoweringPass.cpp
+  ToLLVMLoweringPass.cpp
 ) 
 
 add_dependencies(ToyMLIRPass ToyCombineIncGen)
@@ -15,4 +16,11 @@ target_link_libraries(
   MLIRArithDialect
   MLIRAffineDialect
   MLIRFuncDialect
+  MLIRSCFDialect
+  MLIRArithToLLVM
+  MLIRSCFToControlFlow
+  MLIRControlFlowToLLVM
+  MLIRAffineToStandard
+  MLIRFuncToLLVM
+  MLIRMemRefToLLVM
 )

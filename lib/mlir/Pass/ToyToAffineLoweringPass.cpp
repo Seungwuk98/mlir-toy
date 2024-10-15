@@ -71,10 +71,6 @@ static void lowerOpToLoops(Operation *op, ValueRange operands,
   rewriter.replaceOp(op, alloc);
 }
 
-template <typename OpAdaptor, typename BinaryOp>
-static void binaryOpToLoops(Operation *op, ValueRange operands,
-                            PatternRewriter &rewriter) {}
-
 struct TransposeOpLowering : public ConversionPattern {
   TransposeOpLowering(MLIRContext *context)
       : ConversionPattern(TransposeOp::getOperationName(), 1, context) {}

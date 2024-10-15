@@ -4,7 +4,7 @@
 
 namespace toy::test {
 
-TEST_CASE("MLIR Lowering Tests" *
+TEST_CASE("MLIR Affine Lowering Tests" *
           doctest::test_suite("MLIR Generation Tests")) {
 
   MLIR_AFFINE_LOWER_TEST("One Transpose", R"(
@@ -222,6 +222,17 @@ module {
     return
   }
 })");
+}
+
+TEST_CASE("MLIR LLVM Lowering Tests" *
+          doctest::test_suite("MLIR Generation Tests")) {
+  MLIR_LLVM_LOWER_TEST("Print tensor", R"(
+
+                       def main() {
+                          print([1, 2, 3, 4, 5, 6]);
+                       }
+                       )",
+                       R"()");
 }
 
 } // namespace toy::test

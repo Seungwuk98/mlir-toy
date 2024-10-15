@@ -1,5 +1,6 @@
 #include "MLIRTestUtils.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
@@ -12,6 +13,7 @@ bool MLIRTest(llvm::StringRef Program,
               std::function<bool(mlir::ModuleOp)> CheckFn) {
   llvm::SourceMgr SM;
   ToyContext ctx;
+  mlir::SourceMgrDiagnosticHandler diagHandler(SM, &ctx, llvm::errs());
   DiagnosticReporter Reporter(SM, llvm::errs());
 
   auto memBuf = llvm::MemoryBuffer::getMemBuffer(Program);
@@ -114,6 +116,28 @@ bool MLIRAffineLoweringTest(llvm::StringRef Program, llvm::StringRef Expected) {
     fnPm.addPass(mlir::createCanonicalizerPass());
 
     pm.addPass(mlir::toy::createToyToAffineLoweringPass());
+    if (mlir::failed(pm.run(module))) {
+      FAIL("Failed to run mlir pass");
+      return false;
+    }
+
+    cmpModuleAndExpected(module, Expected);
+    return true;
+  });
+}
+
+bool MLIRLLVMLoweringTest(llvm::StringRef Program, llvm::StringRef Expected) {
+  return MLIRTest(Program, [&](mlir::ModuleOp module) {
+    mlir::PassManager pm(module->getName());
+    pm.addPass(mlir::createInlinerPass());
+
+    auto &fnPm = pm.nest<mlir::toy::FuncOp>();
+    fnPm.addPass(mlir::toy::createShapeInferencePass());
+    fnPm.addPass(mlir::createCanonicalizerPass());
+
+    pm.addPass(mlir::toy::createToyToAffineLoweringPass());
+    pm.addPass(mlir::toy::createToyToLLVMLoweringPass());
+
     if (mlir::failed(pm.run(module))) {
       module.dump();
       FAIL("Failed to run mlir pass");

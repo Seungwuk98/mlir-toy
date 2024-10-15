@@ -24,6 +24,8 @@ bool MLIRShapeInferencePassTest(llvm::StringRef Program,
 
 bool MLIRAffineLoweringTest(llvm::StringRef Program, llvm::StringRef Expected);
 
+bool MLIRLLVMLoweringTest(llvm::StringRef Program, llvm::StringRef Expected);
+
 } // namespace toy::test
 
 #define MLIR_GEN_TEST(TestName, Program, Expected)                             \
@@ -40,5 +42,7 @@ bool MLIRAffineLoweringTest(llvm::StringRef Program, llvm::StringRef Expected);
 #define MLIR_AFFINE_LOWER_TEST(TestName, Program, Expected)                    \
   SUBCASE(TestName)                                                            \
   CHECK(::toy::test::MLIRAffineLoweringTest(Program, Expected))
+#define MLIR_LLVM_LOWER_TEST(TestName, Program, Expected)                      \
+  SUBCASE(TestName) CHECK(::toy::test::MLIRLLVMLoweringTest(Program, Expected))
 
 #endif // TEST_MLIR_TEST_UTILS_H
