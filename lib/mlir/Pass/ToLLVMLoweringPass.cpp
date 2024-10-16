@@ -8,11 +8,11 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
@@ -41,11 +41,11 @@ public:
 };
 
 struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
-  using OpConversionPattern<PrintOp>::OpConversionPattern;
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(PrintOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
+                  ConversionPatternRewriter &rewriter) const override final {
     auto module = op->getParentOfType<ModuleOp>();
     auto printfType = getPrintfType(rewriter);
     auto printf = getOrInsertPrintf(rewriter, module);
@@ -81,91 +81,21 @@ struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
 
     for (auto [idx, elSize] : llvm::enumerate(shape)) {
       auto to = indexToValue[elSize];
+
       auto scfFor =
           rewriter.create<scf::ForOp>(op->getLoc(), constant0, to, constant1);
-      for (auto &nested : *scfFor.getBody())
-        rewriter.eraseOp(&nested);
-      auto iv = scfFor.getInductionVar();
-      iterValues.emplace_back(iv);
-
-      rewriter.setInsertionPointToEnd(scfFor.getBody());
-
-      auto toMinus1 =
-          rewriter.create<arith::SubIOp>(op->getLoc(), to, constant1);
-      auto ivEqualWithToMinus1 = rewriter.create<arith::CmpIOp>(
-          op->getLoc(), arith::CmpIPredicate::eq, iv, toMinus1);
-
-      /// TODO implement printf
-      rewriter.create<scf::YieldOp>(op->getLoc());
       rewriter.setInsertionPointToStart(scfFor.getBody());
-    }
 
-    rewriter.eraseOp(op);
-    return success();
-  }
-
-  LogicalResult matchAndRewriteImpl(PrintOp op, OpAdaptor adaptor,
-                                    ConversionPatternRewriter &rewriter) const {
-    auto module = op->getParentOfType<ModuleOp>();
-    auto printfType = getPrintfType(rewriter);
-    auto printf = getOrInsertPrintf(rewriter, module);
-
-    /// need to use original operand
-    auto input = op.getInput();
-    auto type = input.getType().cast<MemRefType>();
-    auto shape = type.getShape();
-
-    DenseMap<int64_t, Value> indexToValue;
-    std::ranges::for_each(shape, [&](int64_t idx) {
-      auto [iter, inserted] = indexToValue.try_emplace(idx, nullptr);
-      if (inserted)
-        iter->second =
-            rewriter.create<arith::ConstantIndexOp>(op->getLoc(), idx);
-    });
-
-    auto constant0 = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
-    auto [iter, inserted] = indexToValue.try_emplace(1, nullptr);
-    if (inserted)
-      iter->second = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 1);
-    auto constant1 = iter->second;
-
-    auto floatNewlineFmt =
-        getOrInsertGlobalString(rewriter, module, op->getLoc(), FLOAT_NEWLINE);
-    auto floatSpaceFmt =
-        getOrInsertGlobalString(rewriter, module, op->getLoc(), FLOAT_SPACE);
-    auto newline =
-        getOrInsertGlobalString(rewriter, module, op->getLoc(), NEWLINE);
-
-    llvm::SmallVector<Value> iterValues;
-    iterValues.reserve(shape.size());
-
-    for (auto [idx, elSize] : llvm::enumerate(shape)) {
-      auto to = indexToValue[elSize];
-
-      auto scfFor =
-          rewriter.create<scf::ForOp>(op->getLoc(), constant0, to, constant1);
-      for (auto &nested : *scfFor.getBody())
-        rewriter.eraseOp(&nested);
       auto iv = scfFor.getInductionVar();
       iterValues.emplace_back(iv);
-
-      rewriter.setInsertionPointToEnd(scfFor.getBody());
 
       auto toMinus1 =
           rewriter.create<arith::SubIOp>(op->getLoc(), to, constant1);
       auto ivEqualWithToMinus1 = rewriter.create<arith::CmpIOp>(
           op->getLoc(), arith::CmpIPredicate::eq, iv, toMinus1);
-
-      if (idx != shape.size() - 1) {
-        rewriter.create<scf::IfOp>(op->getLoc(), ivEqualWithToMinus1,
-                                   [&](OpBuilder &builder, Location loc) {
-                                     builder.create<LLVM::CallOp>(
-                                         loc, printfType, printf,
-                                         ValueRange{newline});
-                                     builder.create<scf::YieldOp>(loc);
-                                   });
-      } else {
-        auto load = rewriter.create<memref::LoadOp>(op->getLoc(), input);
+      if (idx == shape.size() - 1) {
+        auto load =
+            rewriter.create<memref::LoadOp>(op->getLoc(), input, iterValues);
         rewriter.create<scf::IfOp>(
             op->getLoc(), ivEqualWithToMinus1,
             [&](OpBuilder &builder, Location loc) {
@@ -178,11 +108,16 @@ struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
                                            ValueRange{floatNewlineFmt, load});
               builder.create<scf::YieldOp>(loc);
             });
+
+      } else {
+        rewriter.create<scf::IfOp>(op->getLoc(), ivEqualWithToMinus1,
+                                   [&](OpBuilder &builder, Location loc) {
+                                     builder.create<LLVM::CallOp>(
+                                         loc, printfType, printf,
+                                         ValueRange{newline});
+                                     builder.create<scf::YieldOp>(loc);
+                                   });
       }
-
-      rewriter.create<scf::YieldOp>(op->getLoc());
-
-      rewriter.setInsertionPointToStart(scfFor.getBody());
     }
 
     rewriter.eraseOp(op);
@@ -223,8 +158,7 @@ struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
         loc, rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
     auto getCharPtr = rewriter.create<LLVM::GEPOp>(
         loc, LLVM::LLVMPointerType::get(module.getContext()),
-        globalOp.getType(), getCharPtrPtr,
-        ArrayRef<Value>{constant0, constant0});
+        globalOp.getType(), getCharPtrPtr, ArrayRef<Value>{constant0});
     return getCharPtr;
   }
 
@@ -254,10 +188,10 @@ struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
 void ToLLVMLoweringPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
 
-  target.addLegalOp<ModuleOp>();
+  target.addLegalOp<scf::YieldOp, ModuleOp>();
 
-  LLVMTypeConverter typeConverter(&getContext());
   RewritePatternSet patterns(&getContext());
+  LLVMTypeConverter typeConverter(&getContext());
 
   populateAffineToStdConversionPatterns(patterns);
   populateSCFToControlFlowConversionPatterns(patterns);

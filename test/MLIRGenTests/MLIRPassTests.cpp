@@ -119,6 +119,4 @@ module {
 )");
 }
 
-TEST_CASE("MLIR Toy To Affine Lowering Pass Tests" *
-          doctest::test_suite("MLIR Generation Tests")) {}
 } // namespace toy::test
