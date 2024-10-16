@@ -16,6 +16,7 @@
 #include "toy/mlir/Pass/Passes.h"
 #include "toy/parser/Parser.h"
 #include "toy/reporter/DiagnosticReporter.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -50,6 +51,9 @@ enum InputKind {
   Toy,
   MLIR,
 };
+
+enum OptLevel { O0 = 0, O1, O2, O3 };
+
 } // namespace
 
 static llvm::cl::opt<Action> ActionFlag(
@@ -67,6 +71,13 @@ static llvm::cl::opt<InputKind>
               llvm::cl::values(clEnumValN(Toy, "toy", "Toy input file"),
                                clEnumValN(MLIR, "mlir", "MLIR input file")),
               llvm::cl::init(Unknown));
+
+static llvm::cl::opt<OptLevel> OptLevelFlag(
+    llvm::cl::desc("choose the optimization level"),
+    llvm::cl::values(clEnumValN(O0, "g", "No optimization"),
+                     clEnumValN(O1, "O1", "Optimization level 1"),
+                     clEnumValN(O2, "O2", "Optimization level 2"),
+                     clEnumValN(O3, "O3", "Optimization level 3")));
 
 Module parse(ToyContext &Ctx, llvm::SourceMgr &SM,
              DiagnosticReporter &Reporter) {
@@ -93,10 +104,9 @@ OwningOpRef<ModuleOp> irGen(Module M, ToyContext &Ctx,
   return G.getModuleOp();
 }
 
-bool dump(llvm::function_ref<void(raw_ostream &)> outFn) {
+bool dump(llvm::function_ref<bool(raw_ostream &)> outFn) {
   if (OutputFile == "-") {
-    outFn(llvm::outs());
-    return 0;
+    return outFn(llvm::outs());
   }
 
   std::error_code EC;
@@ -105,8 +115,7 @@ bool dump(llvm::function_ref<void(raw_ostream &)> outFn) {
     llvm::errs() << "error opening file: " << EC.message() << "\n";
     return 1;
   }
-  outFn(os);
-  return 0;
+  return outFn(os);
 }
 
 bool runPM(PassManager &PM, ModuleOp moduleOp) {
@@ -140,13 +149,19 @@ int main(int argc, const char **argv) {
     return 1;
 
   if (ActionFlag == DumpAST)
-    return dump([&module](raw_ostream &os) { os << module.toString(); });
+    return dump([&module](raw_ostream &os) {
+      os << module.toString();
+      return true;
+    });
 
   auto moduleOp = irGen(module, toyContext, reporter);
   if (!moduleOp)
     return 1;
 
-  auto moduleDumpFn = [&moduleOp](raw_ostream &os) { moduleOp->print(os); };
+  auto moduleDumpFn = [&moduleOp](raw_ostream &os) {
+    moduleOp->print(os);
+    return true;
+  };
 
   if (ActionFlag == DumpToyDialect)
     return dump(moduleDumpFn);
@@ -170,8 +185,31 @@ int main(int argc, const char **argv) {
   if (runPM(PM, moduleOp.get()))
     return 1;
   if (ActionFlag == DumpLLVMDialect)
-    return dump([&moduleOp](raw_ostream &os) { moduleOp->print(os); });
+    return dump(moduleDumpFn);
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+
+  llvm::LLVMContext llvmContext;
+
+  // Configure the LLVM Module
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Could not create JITTargetMachineBuilder\n";
+    return 1;
+  }
+
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Could not create TargetMachine\n";
+    return 1;
+  }
+
+  return dump([&toyContext, &moduleOp, tm = tmOrError->get()](raw_ostream &os) {
+    mlir::toy::LLVMDumper dumper(&toyContext, *tm, OptLevelFlag, os);
+    if (ActionFlag == DumpLLVMIR)
+      return failed(dumper.Dump(moduleOp.get()));
+    assert(ActionFlag == RunJIT);
+    return failed(dumper.RunJIT(moduleOp.get()));
+  });
 }

@@ -11,4 +11,6 @@ target_link_libraries(
 
   PRIVATE 
   ${LLVM_TARGET_SPECIFIC_LIBS}
+  MLIRTargetLLVMIRExport
+  MLIRExecutionEngine
 )

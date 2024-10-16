@@ -3,8 +3,6 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Export.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/TargetSelect.h"
 
 namespace mlir::toy {
 

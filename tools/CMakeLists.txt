@@ -13,4 +13,5 @@ target_link_libraries(
   ToyLLVMDumper
   ToyMLIRGen
   ToyMLIRPass
+  ToyParser
 )
