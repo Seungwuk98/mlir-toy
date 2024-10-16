@@ -20,6 +20,7 @@ public:
   }
 
   std::size_t getErrorCount() const { return ErrorCount; }
+  llvm::SourceMgr &getSourceMgr() { return SM; }
 
 private:
   llvm::SourceMgr &SM;
