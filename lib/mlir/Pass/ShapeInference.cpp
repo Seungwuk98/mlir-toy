@@ -1,6 +1,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassRegistry.h"
 #include "toy/mlir/Dialect/ToyOp.h"
 #include <llvm-18/llvm/ADT/SmallPtrSet.h>
 
@@ -47,6 +48,10 @@ public:
     }
   }
 
+  llvm::StringRef getArgument() const override final {
+    return "toy-shape-inference";
+  }
+
 private:
   static bool areAllShapesKnown(Operation *op) {
     return llvm::all_of(op->getOperands(), [](Value operand) {
@@ -64,5 +69,7 @@ private:
 std::unique_ptr<Pass> createShapeInferencePass() {
   return std::make_unique<ShapeInferencePass>();
 }
+
+void registerShapeInferencePass() { registerPass(createShapeInferencePass); }
 
 } // namespace mlir::toy

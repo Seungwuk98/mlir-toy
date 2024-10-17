@@ -30,6 +30,8 @@ public:
   }
   void runOnOperation() override;
 
+  llvm::StringRef getArgument() const override final { return "toy-to-affine"; }
+
 private:
 };
 
@@ -266,6 +268,10 @@ void ToyToAffineLoweringPass::runOnOperation() {
 
 std::unique_ptr<Pass> createToyToAffineLoweringPass() {
   return std::make_unique<ToyToAffineLoweringPass>();
+}
+
+void registerToyToAffineLoweringPass() {
+  registerPass(createToyToAffineLoweringPass);
 }
 
 } // namespace mlir::toy

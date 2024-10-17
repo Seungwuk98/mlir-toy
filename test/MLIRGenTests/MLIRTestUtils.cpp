@@ -136,7 +136,7 @@ bool MLIRLLVMLoweringTest(llvm::StringRef Program, llvm::StringRef Expected) {
     fnPm.addPass(mlir::createCanonicalizerPass());
 
     pm.addPass(mlir::toy::createToyToAffineLoweringPass());
-    pm.addPass(mlir::toy::createToyToLLVMLoweringPass());
+    pm.addPass(mlir::toy::createAffineToLLVMLoweringPass());
 
     if (mlir::failed(pm.run(module))) {
       module.dump();

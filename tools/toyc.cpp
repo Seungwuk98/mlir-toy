@@ -35,6 +35,8 @@ static llvm::cl::opt<std::string> OutputFile("output",
                                              llvm::cl::desc("Toy output File"),
                                              llvm::cl::value_desc("filename"),
                                              llvm::cl::init("-"));
+static llvm::cl::alias OutputFileAlias("o", llvm::cl::desc("Alias for -output"),
+                                       llvm::cl::aliasopt(OutputFile));
 
 namespace {
 enum Action {
@@ -64,7 +66,8 @@ static llvm::cl::opt<Action> ActionFlag(
         clEnumValN(DumpAffineDialect, "affine", "Print the Affine dialect"),
         clEnumValN(DumpLLVMDialect, "llvm", "Print the LLVM dialect"),
         clEnumValN(DumpLLVMIR, "llvm-ir", "Print the LLVM IR"),
-        clEnumValN(RunJIT, "jit", "Run the JIT")));
+        clEnumValN(RunJIT, "jit", "Run the JIT")),
+    llvm::cl::init(DumpToyDialect));
 
 static llvm::cl::opt<InputKind>
     InputType("ext", llvm::cl::desc("Specify the input type"),
@@ -105,9 +108,8 @@ OwningOpRef<ModuleOp> irGen(Module M, ToyContext &Ctx,
 }
 
 bool dump(llvm::function_ref<bool(raw_ostream &)> outFn) {
-  if (OutputFile == "-") {
+  if (OutputFile == "-")
     return outFn(llvm::outs());
-  }
 
   std::error_code EC;
   llvm::raw_fd_ostream os(OutputFile, EC);
@@ -124,8 +126,6 @@ bool runPM(PassManager &PM, ModuleOp moduleOp) {
 }
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
-
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
@@ -180,7 +180,7 @@ int main(int argc, const char **argv) {
   if (ActionFlag == DumpAffineDialect)
     return dump(moduleDumpFn);
 
-  PM.addPass(mlir::toy::createToyToLLVMLoweringPass());
+  PM.addPass(mlir::toy::createAffineToLLVMLoweringPass());
 
   if (runPM(PM, moduleOp.get()))
     return 1;

@@ -2,6 +2,8 @@
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
 namespace mlir::toy {
@@ -35,8 +37,8 @@ LogicalResult LLVMDumper::RunJIT(ModuleOp module) {
   assert(engineOpt && "Failed to construct a execution engine");
   auto *engine = engineOpt->get();
 
-  auto invokationResult = engine->invoke("main");
-  if (!invokationResult) {
+  auto invokationResult = engine->invokePacked("main");
+  if (invokationResult) {
     Err << "Failed to run the main function\n";
     return failure();
   }

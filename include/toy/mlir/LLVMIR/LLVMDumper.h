@@ -3,6 +3,8 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "toy/context/ToyContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/TargetSelect.h"
@@ -19,7 +21,10 @@ public:
   LLVMDumper(ToyContext *ctx, llvm::TargetMachine &targetMachine,
              std::uint8_t optLevel = 0, llvm::raw_ostream &os = llvm::outs(),
              llvm::raw_ostream &err = llvm::errs())
-      : Ctx(ctx), TM(targetMachine), OS(os), Err(err), OptLevel(optLevel) {}
+      : Ctx(ctx), TM(targetMachine), OS(os), Err(err), OptLevel(optLevel) {
+    registerLLVMDialectTranslation(*ctx);
+    registerBuiltinDialectTranslation(*ctx);
+  }
 
   LogicalResult Dump(ModuleOp module);
 
