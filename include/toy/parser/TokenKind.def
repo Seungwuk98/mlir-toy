@@ -22,6 +22,7 @@ TOKEN(slash)
 TOKEN(equal)
 TOKEN(comma)
 TOKEN(semicolon)
+TOKEN(dot)
 
 TOKEN(number)
 TOKEN(identifier)
@@ -31,6 +32,7 @@ KEYWORD(def)
 KEYWORD(print)
 KEYWORD(return)
 KEYWORD(transpose)
+KEYWORD(struct)
 
 TOKEN(EOF)
 

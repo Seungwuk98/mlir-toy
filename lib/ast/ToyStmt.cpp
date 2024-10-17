@@ -40,6 +40,17 @@ void FuncDecl::print(toy::FuncDecl ast, ::ast::ASTPrinter &printer) {
   BlockStmt::print(ast.getBody(), printer);
 }
 
+void StructDecl::print(toy::StructDecl ast, ::ast::ASTPrinter &printer) {
+  printer.OS() << "struct " << ast.getName() << " {";
+  {
+    ast::ASTPrinter::AddIndentScope indentScope(printer, 2);
+    for (auto field : ast.getFields()) {
+      printer.Line() << "var " << field << ';';
+    }
+  }
+  printer.Line() << '}';
+}
+
 void VarDecl::print(toy::VarDecl ast, ::ast::ASTPrinter &printer) {
   printer.OS() << "var " << ast.getName();
   if (ast.getShape()) {
@@ -55,6 +66,17 @@ void VarDecl::print(toy::VarDecl ast, ::ast::ASTPrinter &printer) {
   printer.OS() << " = ";
   ast.getInit().print(printer);
   printer.OS() << ';';
+}
+
+void StructVarDecl::print(toy::StructVarDecl ast, ::ast::ASTPrinter &printer) {
+  printer.OS() << ast.getStructName() << ' ' << ast.getName() << " = ";
+  printer.OS() << '{';
+  for (auto I = ast.getInit().begin(), E = ast.getInit().end(); I != E; ++I) {
+    if (I != ast.getInit().begin())
+      printer.OS() << ", ";
+    I->print(printer);
+  }
+  printer.OS() << "};";
 }
 
 void ExprStmt::print(toy::ExprStmt ast, ::ast::ASTPrinter &printer) {

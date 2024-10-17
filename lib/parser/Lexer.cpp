@@ -128,6 +128,9 @@ void Lexer::Lex() {
   case ';':
     TokenKind = Token::Tok_semicolon;
     break;
+  case '.':
+    TokenKind = Token::Tok_dot;
+    break;
   case eof:
     TokenKind = Token::Tok_EOF;
     return;

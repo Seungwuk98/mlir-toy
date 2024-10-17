@@ -11,5 +11,10 @@ DIAG(err_unexpected_function_call, Error,
 DIAG(err_unexpected_tensor_element, Error,
      "Tensor element must be a number or tensor")
 DIAG(err_invalid_tensor_shape, Error, "All of elements' shape must be same")
-
+DIAG(err_redeclared_struct_type, Error, "Redeclared struct type : {0}")
+DIAG(err_duplicated_field_name, Error, "Duplicated field name : {0}")
+DIAG(note_previous_declared_field_name, Note, "Already declared field here")
+DIAG(err_unmatched_struct_field_count, Error,
+     "Unmatched struct field count. expected: {0}, got: {1}")
+DIAG(note_previous_struct_declaration, Note, "Previous struct declaration here")
 #undef DIAG

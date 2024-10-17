@@ -135,6 +135,10 @@ void IRGenerator::visit(Print expr) {
   builder.create<mlir::toy::PrintOp>(getLoc(expr), targetV);
 }
 
+void IRGenerator::visit(StructAccess expr) {
+  llvm_unreachable("Not implemented");
+}
+
 void IRGenerator::visit(Module moduleStmt) {
   auto moduleOp = builder.create<mlir::ModuleOp>(getLoc(moduleStmt));
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -208,6 +212,10 @@ void IRGenerator::visit(FuncDecl stmt) {
                                         mlir::ValueRange{});
 }
 
+void IRGenerator::visit(StructDecl stmt) {
+  llvm_unreachable("Not implemented");
+}
+
 void IRGenerator::visit(VarDecl stmt) {
   auto varName = stmt.getName();
   stmt.getInit().accept(*this);
@@ -220,6 +228,10 @@ void IRGenerator::visit(VarDecl stmt) {
                                                   result);
   }
   symbolTable.insert(varName, result);
+}
+
+void IRGenerator::visit(StructVarDecl stmt) {
+  llvm_unreachable("Not implemented");
 }
 
 void IRGenerator::visit(ExprStmt stmt) { stmt.getExpr().accept(*this); }

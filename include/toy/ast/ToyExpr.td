@@ -28,4 +28,8 @@ def ToyAST_Transpose : ToyExpr { let treeMember = (ins Expr : $target); }
 
 def ToyAST_Print : ToyExpr { let treeMember = (ins Expr : $target); }
 
+def ToyAST_StructAccess : ToyExpr {
+  let treeMember = (ins Expr : $left, String : $field);
+}
+
 #endif // TOY_EXPR_TD

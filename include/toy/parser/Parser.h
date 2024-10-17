@@ -49,11 +49,16 @@ private:
     Parser &parser;
   };
 
-  /// <module> ::= <function decl>+
+  /// <module> ::= (<function decl> | <struct decl>)+
   Module parseModule();
+
+  Stmt parseFunctionOrStructDecl();
 
   /// <function decl> ::= `def` <identifier> `(` <param list>* `)` <block stmt>
   FuncDecl parseFunctionDecl();
+
+  /// <struct decl> ::= `struct` <identifier> `{` <field decl>+ `}`
+  StructDecl parseStructDecl();
 
   /// <block stmt> ::= `{` <stmt>* `}`
   BlockStmt parseBlockStmt();
@@ -75,14 +80,21 @@ private:
   /// <var decl> ::= `var` <identifier> (`<` <shape list> `>`) `=` <expr> `;`
   VarDecl parseVarDecl();
 
+  /// <struct var decl> ::= <struct identifier> <identifier> `=` '{' <expr> (','
+  /// <expr>)* ','? '}' `;`
+  StructVarDecl parseStructVarDecl();
+
   /// <expr> ::= <additive operation>
   Expr parseExpr();
 
   /// <add operation>> ::= <add operation> ((`+` | `-`) <add operation>)?
   Expr parseAddOperation();
 
-  /// <mul operation> ::= <function call> ((`*` | `/`) <function call>)?
+  /// <mul operation> ::= <struct access> ((`*` | `/`) <struct access>)?
   Expr parseMulOperation();
+
+  /// <struct access> ::= <function call> (`.` <identifier>) ?
+  Expr parseStructAccess();
 
   /// <function call> ::= <constant> ( `(` <expr list> `)`) ?
   Expr parseFunctionCall();
@@ -130,6 +142,8 @@ private:
   DiagnosticReporter &reporter;
 
   llvm::SmallVector<llvm::SMLoc> fixedLocation;
+
+  llvm::DenseMap<llvm::StringRef, StructDecl> structTable;
 };
 
 template <Token::Kind Kind> bool Parser::PeekExpect() {

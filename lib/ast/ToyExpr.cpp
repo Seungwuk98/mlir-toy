@@ -70,6 +70,11 @@ void Print::print(toy::Print ast, ::ast::ASTPrinter &printer) {
   printer.OS() << ')';
 }
 
+void StructAccess::print(toy::StructAccess ast, ::ast::ASTPrinter &printer) {
+  ast.getLeft().print(printer);
+  printer.OS() << '.' << ast.getField();
+}
+
 } // namespace toy
 
 #define AST_TABLEGEN_DEF

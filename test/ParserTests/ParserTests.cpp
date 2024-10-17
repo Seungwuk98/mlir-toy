@@ -148,6 +148,28 @@ def main() {
   var f = multiply_transpose(a, c);
 }
 )");
+
+  PARSER_TEST("Toy Struct Program", R"(
+struct MyStruct {
+  var a;
+  var b;
+}
+
+def main() {
+  MyStruct x = {1, 2};
+  print(x.a);
+}
+)",
+              R"(
+struct MyStruct {
+  var a;
+  var b;
+}
+def main() {
+  MyStruct x = {1, 2};
+  print(x.a);
+}
+)");
 }
 
 } // namespace toy::test

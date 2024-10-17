@@ -13,8 +13,17 @@ def ToyAST_FuncDecl : ToyStmt {
   let treeMember = (ins String : $name, SmallVector<String> : $params, "::toy::BlockStmt" : $body);
 }
 
+def ToyAST_StructDecl : ToyStmt {
+  let treeMember = (ins String : $name, SmallVector<String> : $fields);
+}
+
 def ToyAST_VarDecl : ToyStmt {
   let treeMember = (ins String : $name, Optional<ShapeInfo>: $shape, Expr : $init);
+}
+
+def ToyAST_StructVarDecl : ToyStmt {
+  let treeMember = (ins String : $structName, String : $name, SmallVector<Expr> : $init); 
+  let tag = (ins "::toy::StructDecl" : $structDecl);
 }
 
 def ToyAST_ExprStmt : ToyStmt { let treeMember = (ins Expr : $expr); }

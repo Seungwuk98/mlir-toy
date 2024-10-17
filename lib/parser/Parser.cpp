@@ -38,7 +38,7 @@ Module Parser::parseModule() {
   llvm::SmallVector<Stmt> stmts;
   bool fail = false;
   while (!Peek()->is<Token::Tok_EOF>()) {
-    auto funDecl = parseFunctionDecl();
+    auto funDecl = parseFunctionOrStructDecl();
     if (!funDecl) {
       fail = true;
       recovery();
@@ -49,6 +49,18 @@ Module Parser::parseModule() {
   if (fail)
     return nullptr;
   return Module::create(scope.CreateRange(), context, stmts);
+}
+
+Stmt Parser::parseFunctionOrStructDecl() {
+  if (Peek()->is<Token::Tok_def>())
+    return parseFunctionDecl();
+
+  if (Peek()->is<Token::Tok_struct>())
+    return parseStructDecl();
+
+  Report(Peek()->getRange(), Reporter::Diag::err_unexpected_token,
+         Peek()->getSymbol());
+  return nullptr;
 }
 
 FuncDecl Parser::parseFunctionDecl() {
@@ -81,6 +93,78 @@ FuncDecl Parser::parseFunctionDecl() {
                           paramList, blockStmt);
 }
 
+#define RECOVERY                                                               \
+  fail = true;                                                                 \
+  recovery();                                                                  \
+  continue
+
+StructDecl Parser::parseStructDecl() {
+  FixLocationScope scope(*this);
+  if (Consume<Token::Tok_struct>())
+    return nullptr;
+
+  auto id = Peek();
+  if (Expect<Token::Tok_identifier>(id))
+    return nullptr;
+  Skip();
+  auto structName = id->getSymbol();
+
+  auto [iter, inserted] = structTable.try_emplace(structName, nullptr);
+  if (!inserted) {
+    Report(id->getRange(), Reporter::Diag::err_redeclared_struct_type,
+           structName);
+    return nullptr;
+  }
+
+  if (Consume<Token::Tok_lbrace>())
+    return nullptr;
+
+  llvm::SmallVector<std::string> fields;
+  llvm::DenseMap<llvm::StringRef, llvm::SMRange> fieldTable;
+  bool fail = false;
+
+  while (!Peek()->is<Token::Tok_rbrace>() && !Peek()->is<Token::Tok_EOF>()) {
+    if (Consume<Token::Tok_var>()) {
+      RECOVERY;
+    }
+    auto fieldTok = Peek();
+    if (Expect<Token::Tok_identifier>(fieldTok)) {
+      RECOVERY;
+    }
+    auto range = fieldTok->getRange();
+    Skip();
+
+    if (Consume<Token::Tok_semicolon>()) {
+      RECOVERY;
+    }
+
+    if (!fail) {
+      auto [fieldIter, fieldInserted] =
+          fieldTable.try_emplace(fieldTok->getSymbol(), range);
+      if (!fieldInserted) {
+        Report(range, Reporter::Diag::err_duplicated_field_name,
+               fieldTok->getSymbol());
+        Report(fieldIter->second,
+               Reporter::Diag::note_previous_declared_field_name);
+        RECOVERY;
+      }
+      fields.emplace_back(fieldTok->getSymbol().str());
+    }
+  }
+
+  if (fail)
+    return nullptr;
+
+  if (Consume<Token::Tok_rbrace>())
+    return nullptr;
+
+  auto structDecl =
+      StructDecl::create(scope.CreateRange(), context, structName, fields);
+  return iter->second = structDecl;
+}
+
+#undef RECOVERY
+
 BlockStmt Parser::parseBlockStmt() {
   FixLocationScope scope(*this);
   if (Consume<Token::Tok_lbrace>())
@@ -112,6 +196,9 @@ Stmt Parser::parseStmt() {
     return parseReturnStmt();
   if (Peek()->is<Token::Tok_var>())
     return parseVarDecl();
+  if (Peek()->is<Token::Tok_identifier>() &&
+      structTable.contains(Peek()->getSymbol()))
+    return parseStructVarDecl();
   return parseExprStmt();
 }
 
@@ -179,6 +266,69 @@ VarDecl Parser::parseVarDecl() {
                          expr);
 }
 
+StructVarDecl Parser::parseStructVarDecl() {
+  FixLocationScope scope(*this);
+  auto structTok = Peek();
+  if (Expect<Token::Tok_identifier>(structTok))
+    return nullptr;
+  Skip();
+  auto structName = structTok->getSymbol();
+
+  auto varNameTok = Peek();
+  if (Expect<Token::Tok_identifier>(varNameTok))
+    return nullptr;
+  Skip();
+
+  auto varName = varNameTok->getSymbol();
+
+  if (Consume<Token::Tok_equal>())
+    return nullptr;
+
+  if (Consume<Token::Tok_lbrace>())
+    return nullptr;
+
+  llvm::SmallVector<Expr> exprs;
+  auto expr = parseExpr();
+  if (!expr)
+    return nullptr;
+  exprs.emplace_back(expr);
+
+  while (Peek()->is<Token::Tok_comma>()) {
+    Skip();
+    if (Peek()->is<Token::Tok_rbrace>())
+      break;
+    expr = parseExpr();
+    if (!expr)
+      return nullptr;
+    exprs.emplace_back(expr);
+  }
+
+  if (Consume<Token::Tok_rbrace>())
+    return nullptr;
+
+  if (Consume<Token::Tok_semicolon>())
+    return nullptr;
+
+  auto structDecl = structTable.at(structName);
+  if (structDecl.getFields().size() != exprs.size()) {
+    Report(
+        llvm::SMRange{
+            exprs.front().getLoc().Start,
+            exprs.back().getLoc().End,
+        },
+        Reporter::Diag::err_unmatched_struct_field_count,
+        structDecl.getFields().size(), exprs.size());
+    Report(structDecl.getLoc(),
+           Reporter::Diag::note_previous_struct_declaration);
+    return nullptr;
+  }
+
+  auto structVarDecl = StructVarDecl::create(scope.CreateRange(), context,
+                                             structName, varName, exprs);
+  structVarDecl.setStructDeclTag(structDecl);
+  return structVarDecl;
+}
+
 Expr Parser::parseExpr() { return parseAddOperation(); }
 
 Expr Parser::parseAddOperation() {
@@ -204,20 +354,40 @@ Expr Parser::parseAddOperation() {
 
 Expr Parser::parseMulOperation() {
   FixLocationScope scope(*this);
-  auto lhs = parseFunctionCall();
+  auto lhs = parseStructAccess();
   if (!lhs)
     return nullptr;
 
   while (Peek()->is<Token::Tok_star, Token::Tok_slash>()) {
     auto op = Advance();
 
-    auto rhs = parseFunctionCall();
+    auto rhs = parseStructAccess();
     if (!rhs)
       return nullptr;
 
     lhs = BinaryOp::create(scope.CreateRange(), context, lhs, rhs,
                            op->is<Token::Tok_star>() ? BinaryOpKind::Mul
                                                      : BinaryOpKind::Div);
+  }
+
+  return lhs;
+}
+
+Expr Parser::parseStructAccess() {
+  FixLocationScope scope(*this);
+  auto lhs = parseFunctionCall();
+  if (!lhs)
+    return nullptr;
+
+  while (Peek()->is<Token::Tok_dot>()) {
+    Skip();
+
+    auto fieldName = Peek();
+    if (Expect<Token::Tok_identifier>(fieldName))
+      return nullptr;
+    Skip();
+    lhs = StructAccess::create(scope.CreateRange(), context, lhs,
+                               fieldName->getSymbol());
   }
 
   return lhs;
