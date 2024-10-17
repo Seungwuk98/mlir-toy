@@ -11,6 +11,11 @@ mlir_tablegen(ToyOp.h.inc -gen-op-decls)
 mlir_tablegen(ToyOp.cpp.inc -gen-op-defs)
 add_public_tablegen_target(ToyOpIncGen)
 
+# tablegen Types
+set(LLVM_TARGET_DEFINITIONS ToyType.td)
+mlir_tablegen(ToyType.h.inc -gen-typedef-decls)
+mlir_tablegen(ToyType.cpp.inc -gen-typedef-defs)
+add_public_tablegen_target(ToyTypeIncGen)
 
 # tablegen Interfaces
 set(LLVM_TARGET_DEFINITIONS ToyInterface.td)

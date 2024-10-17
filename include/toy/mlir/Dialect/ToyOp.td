@@ -6,12 +6,13 @@ include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "toy/mlir/Dialect/ToyInterface.td"
+include "toy/mlir/Dialect/ToyType.td"
 
 //===----------------------------------------------------------------------===// 
 /// ConstantOp 
 //===----------------------------------------------------------------------===//
 
-def ConstantOp : Toy_Op<"constant", [Pure]> {
+def ConstantOp : Toy_Op<"constant", [Pure, ConstantLike]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant operation";
@@ -36,6 +37,7 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
   let results = (outs F64Tensor);
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===// 
@@ -234,7 +236,7 @@ def ReturnOp : Toy_Op<"return", [Pure, HasParent<"FuncOp">, Terminator]> {
     ```
   }];
 
-  let arguments = (ins Variadic<F64Tensor>:$input);
+  let arguments = (ins Variadic<Toy_Type>:$input);
   let assemblyFormat = "($input^ `:` type($input))? attr-dict";
 
   let builders = [
@@ -293,6 +295,60 @@ def TransposeOp : Toy_Op<"transpose", [Pure, DeclareOpInterfaceMethods<ShapeInfe
 
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===// 
+/// Struct Constant 
+//===----------------------------------------------------------------------===//
+
+def StructConstantOp : Toy_Op<"struct_constant", [Pure, ConstantLike]> {
+  let summary = "struct constant operation";
+  let description = [{
+    Constant operation turns a literal struct value into an SSA value. The data
+    is attached to the operation as an attribute. The struct constant is encoded
+    as an array of other constant values. For example:
+
+    ```mlir
+      %0 = toy.struct_constant [
+        dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64>
+      ] : !toy.struct<tensor<*xf64>>
+    ```
+  }];
+
+  let arguments = (ins ArrayAttr:$value);
+  let results = (outs Toy_StructType:$output);
+
+  let assemblyFormat = [{
+    $value attr-dict `:` type($output) 
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===// 
+/// Struct Access 
+//===----------------------------------------------------------------------===//
+
+def StructAccessOp : Toy_Op<"struct_access", [Pure]> {
+  let summary = "struct access operation";
+  let description = [{
+    Access the Nth element of a value returning a struct type.
+  }];
+  
+  let arguments = (ins Toy_StructType:$input, I64Attr:$index);
+  let results = (outs Toy_Type:$output);
+  let assemblyFormat = [{
+    $input `[` $index `]` attr-dict `:` type($input) `->` type($output)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$input, "std::size_t":$index)>
+  ];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+
 }
 
 #endif // TOY_OP_TD

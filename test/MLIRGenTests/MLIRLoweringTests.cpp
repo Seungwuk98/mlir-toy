@@ -235,9 +235,9 @@ def main() {
                        R"(
 module {
   llvm.func @free(!llvm.ptr)
-  llvm.mlir.global internal constant @"@printf.newline"("\0A") {addr_space = 0 : i32}
-  llvm.mlir.global internal constant @"@printf.float.space"("%f ") {addr_space = 0 : i32}
-  llvm.mlir.global internal constant @"@printf.float.newline"("%f\0A") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.newline"("\0A\00") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.float.space"("%f \00") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.float"("%f\00") {addr_space = 0 : i32}
   llvm.func @printf(!llvm.ptr, ...) -> i32
   llvm.func @malloc(i64) -> !llvm.ptr
   llvm.func @main() {
@@ -287,22 +287,22 @@ module {
     %37 = llvm.mlir.constant(6 : index) : i64
     %38 = llvm.mlir.constant(0 : index) : i64
     %39 = llvm.mlir.constant(1 : index) : i64
-    %40 = llvm.mlir.addressof @"@printf.float.newline" : !llvm.ptr
+    %40 = llvm.mlir.addressof @"@printf.float" : !llvm.ptr
     %41 = llvm.mlir.constant(0 : i64) : i64
     %42 = llvm.getelementptr %40[%41] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
     %43 = llvm.mlir.addressof @"@printf.float.space" : !llvm.ptr
     %44 = llvm.mlir.constant(0 : i64) : i64
-    %45 = llvm.getelementptr %43[%44] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
+    %45 = llvm.getelementptr %43[%44] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
     %46 = llvm.mlir.addressof @"@printf.newline" : !llvm.ptr
     %47 = llvm.mlir.constant(0 : i64) : i64
-    %48 = llvm.getelementptr %46[%47] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1 x i8>
+    %48 = llvm.getelementptr %46[%47] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x i8>
     llvm.br ^bb1(%38 : i64)
   ^bb1(%49: i64):  // 2 preds: ^bb0, ^bb5
     %50 = llvm.icmp "slt" %49, %37 : i64
     llvm.cond_br %50, ^bb2, ^bb6
   ^bb2:  // pred: ^bb1
     %51 = llvm.mlir.constant(5 : index) : i64
-    %52 = llvm.icmp "eq" %49, %51 : i64
+    %52 = llvm.icmp "ne" %49, %51 : i64
     %53 = llvm.extractvalue %12[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
     %54 = llvm.getelementptr %53[%49] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %55 = llvm.load %54 : !llvm.ptr -> f64
@@ -321,8 +321,7 @@ module {
     llvm.call @free(%59) : (!llvm.ptr) -> ()
     llvm.return
   }
-}
-)");
+})");
 
   MLIR_LLVM_LOWER_TEST("Print tensor - 2", R"(
 def main() {
@@ -332,9 +331,9 @@ def main() {
                        R"(
 module {
   llvm.func @free(!llvm.ptr)
-  llvm.mlir.global internal constant @"@printf.newline"("\0A") {addr_space = 0 : i32}
-  llvm.mlir.global internal constant @"@printf.float.space"("%f ") {addr_space = 0 : i32}
-  llvm.mlir.global internal constant @"@printf.float.newline"("%f\0A") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.newline"("\0A\00") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.float.space"("%f \00") {addr_space = 0 : i32}
+  llvm.mlir.global internal constant @"@printf.float"("%f\00") {addr_space = 0 : i32}
   llvm.func @printf(!llvm.ptr, ...) -> i32
   llvm.func @malloc(i64) -> !llvm.ptr
   llvm.func @main() {
@@ -404,51 +403,51 @@ module {
     %57 = llvm.mlir.constant(3 : index) : i64
     %58 = llvm.mlir.constant(0 : index) : i64
     %59 = llvm.mlir.constant(1 : index) : i64
-    %60 = llvm.mlir.addressof @"@printf.float.newline" : !llvm.ptr
+    %60 = llvm.mlir.addressof @"@printf.float" : !llvm.ptr
     %61 = llvm.mlir.constant(0 : i64) : i64
     %62 = llvm.getelementptr %60[%61] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
     %63 = llvm.mlir.addressof @"@printf.float.space" : !llvm.ptr
     %64 = llvm.mlir.constant(0 : i64) : i64
-    %65 = llvm.getelementptr %63[%64] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
+    %65 = llvm.getelementptr %63[%64] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
     %66 = llvm.mlir.addressof @"@printf.newline" : !llvm.ptr
     %67 = llvm.mlir.constant(0 : i64) : i64
-    %68 = llvm.getelementptr %66[%67] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1 x i8>
+    %68 = llvm.getelementptr %66[%67] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x i8>
     llvm.br ^bb1(%58 : i64)
   ^bb1(%69: i64):  // 2 preds: ^bb0, ^bb10
     %70 = llvm.icmp "slt" %69, %56 : i64
     llvm.cond_br %70, ^bb2, ^bb11
   ^bb2:  // pred: ^bb1
-    %71 = llvm.mlir.constant(1 : index) : i64
-    %72 = llvm.icmp "eq" %69, %71 : i64
-    llvm.cond_br %72, ^bb3, ^bb4
-  ^bb3:  // pred: ^bb2
-    %73 = llvm.call @printf(%68) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
-    llvm.br ^bb4
-  ^bb4:  // 2 preds: ^bb2, ^bb3
-    llvm.br ^bb5(%58 : i64)
-  ^bb5(%74: i64):  // 2 preds: ^bb4, ^bb9
-    %75 = llvm.icmp "slt" %74, %57 : i64
-    llvm.cond_br %75, ^bb6, ^bb10
-  ^bb6:  // pred: ^bb5
-    %76 = llvm.mlir.constant(2 : index) : i64
-    %77 = llvm.icmp "eq" %74, %76 : i64
-    %78 = llvm.extractvalue %16[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
-    %79 = llvm.mlir.constant(3 : index) : i64
-    %80 = llvm.mul %69, %79  : i64
-    %81 = llvm.add %80, %74  : i64
-    %82 = llvm.getelementptr %78[%81] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    %83 = llvm.load %82 : !llvm.ptr -> f64
-    llvm.cond_br %77, ^bb7, ^bb8
-  ^bb7:  // pred: ^bb6
-    %84 = llvm.call @printf(%65, %83) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
-    llvm.br ^bb9
-  ^bb8:  // pred: ^bb6
-    %85 = llvm.call @printf(%62, %83) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
-    llvm.br ^bb9
-  ^bb9:  // 2 preds: ^bb7, ^bb8
-    %86 = llvm.add %74, %59  : i64
-    llvm.br ^bb5(%86 : i64)
-  ^bb10:  // pred: ^bb5
+    llvm.br ^bb3(%58 : i64)
+  ^bb3(%71: i64):  // 2 preds: ^bb2, ^bb7
+    %72 = llvm.icmp "slt" %71, %57 : i64
+    llvm.cond_br %72, ^bb4, ^bb8
+  ^bb4:  // pred: ^bb3
+    %73 = llvm.mlir.constant(2 : index) : i64
+    %74 = llvm.icmp "ne" %71, %73 : i64
+    %75 = llvm.extractvalue %16[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
+    %76 = llvm.mlir.constant(3 : index) : i64
+    %77 = llvm.mul %69, %76  : i64
+    %78 = llvm.add %77, %71  : i64
+    %79 = llvm.getelementptr %75[%78] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %80 = llvm.load %79 : !llvm.ptr -> f64
+    llvm.cond_br %74, ^bb5, ^bb6
+  ^bb5:  // pred: ^bb4
+    %81 = llvm.call @printf(%65, %80) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    llvm.br ^bb7
+  ^bb6:  // pred: ^bb4
+    %82 = llvm.call @printf(%62, %80) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+    llvm.br ^bb7
+  ^bb7:  // 2 preds: ^bb5, ^bb6
+    %83 = llvm.add %71, %59  : i64
+    llvm.br ^bb3(%83 : i64)
+  ^bb8:  // pred: ^bb3
+    %84 = llvm.mlir.constant(1 : index) : i64
+    %85 = llvm.icmp "ne" %69, %84 : i64
+    llvm.cond_br %85, ^bb9, ^bb10
+  ^bb9:  // pred: ^bb8
+    %86 = llvm.call @printf(%68) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    llvm.br ^bb10
+  ^bb10:  // 2 preds: ^bb8, ^bb9
     %87 = llvm.add %69, %59  : i64
     llvm.br ^bb1(%87 : i64)
   ^bb11:  // pred: ^bb1
@@ -456,8 +455,7 @@ module {
     llvm.call @free(%88) : (!llvm.ptr) -> ()
     llvm.return
   }
-}
-)");
+})");
 }
 
 } // namespace toy::test

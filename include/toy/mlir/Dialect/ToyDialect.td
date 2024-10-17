@@ -24,7 +24,8 @@ def Toy_Dialect : Dialect {
 
   // The C++ namespace that the dialect class definition resides in.
   let cppNamespace = "::mlir::toy";
+
+
+  let useDefaultTypePrinterParser = 0;
 }
-
-
 #endif // TOY_DIALECT_TD

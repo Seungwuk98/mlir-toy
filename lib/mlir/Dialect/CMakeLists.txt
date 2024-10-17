@@ -4,9 +4,10 @@ add_library(
   ToyDialect.cpp
   ToyOp.cpp
   ToyInterface.cpp
+  ToyType.cpp
 )
 
-add_dependencies(ToyDialect ToyDialectIncGen ToyOpIncGen ToyInterfaceIncGen)
+add_dependencies(ToyDialect ToyDialectIncGen ToyOpIncGen ToyInterfaceIncGen ToyTypeIncGen)
 
 target_link_libraries(ToyDialect
   PRIVATE 

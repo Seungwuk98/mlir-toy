@@ -49,6 +49,10 @@ void ToyDialect::initialize() {
       >();
 
   addInterfaces<ToyInlinerInterface>();
+  addTypes<
+#define GEN_TYPEDEF_LIST
+#include "toy/mlir/Dialect/ToyType.cpp.inc"
+      >();
 }
 
 } // namespace mlir::toy

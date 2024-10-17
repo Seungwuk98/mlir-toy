@@ -8,6 +8,7 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LogicalResult.h"
+#include "toy/mlir/Dialect/ToyType.h"
 #include <ranges>
 
 #define GET_OP_CLASSES
@@ -276,6 +277,46 @@ void TransposeOp::inferShapes() {
                                       inputType.getShape().rend()},
       inputType.getElementType());
   getResult().setType(resultType);
+}
+
+//===----------------------------------------------------------------------===//
+/// StructConstantOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult StructConstantOp::verify() {
+  auto structType = getType();
+  auto arrayAttr = getValue();
+  if (!arrayAttr || arrayAttr.size() != structType.size())
+    return emitOpError("attribute type mismatch. expected : ")
+           << structType.size() << ", got : " << arrayAttr.size();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+/// Struct AccessOp
+//===----------------------------------------------------------------------===//
+
+void StructAccessOp::build(OpBuilder &builder, OperationState &odsState,
+                           Value structInst, std::size_t index) {
+  auto structType = structInst.getType().cast<StructType>();
+  odsState.addTypes(structType.getType(index));
+  odsState.addOperands(structInst);
+  odsState.addAttribute("index", builder.getI64IntegerAttr(index));
+}
+
+LogicalResult StructAccessOp::verify() {
+  auto structType = getInput().getType().cast<StructType>();
+
+  auto index = getIndex();
+  if (index >= structType.size())
+    return emitOpError("index out of range. size : ")
+           << structType.size() << ", got : " << index;
+
+  auto resultType = getOutput().getType();
+  if (resultType != structType.getType(index))
+    return emitOpError("result type mismatch. expected : ")
+           << structType.getType(index) << ", got : " << resultType;
+  return success();
 }
 
 } // namespace mlir::toy

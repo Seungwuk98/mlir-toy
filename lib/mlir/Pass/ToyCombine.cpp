@@ -8,6 +8,19 @@ namespace mlir {
 
 namespace mlir::toy {
 
+OpFoldResult ConstantOp::fold(FoldAdaptor) { return getValue(); }
+
+OpFoldResult StructConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
+
+OpFoldResult StructAccessOp::fold(FoldAdaptor adaptor) {
+  auto value = adaptor.getInput().dyn_cast_or_null<ArrayAttr>();
+  if (!value)
+    return nullptr;
+
+  auto index = getIndex();
+  return value[index];
+}
+
 struct SimplifyRedundantTranspose : public OpRewritePattern<TransposeOp> {
 
   SimplifyRedundantTranspose(MLIRContext *context)

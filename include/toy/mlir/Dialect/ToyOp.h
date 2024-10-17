@@ -12,6 +12,7 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "toy/mlir/Dialect/ToyInterface.h"
+#include "toy/mlir/Dialect/ToyType.h"
 
 #define GET_OP_CLASSES
 #include "toy/mlir/Dialect/ToyOp.h.inc"
