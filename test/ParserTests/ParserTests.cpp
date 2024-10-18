@@ -170,6 +170,103 @@ def main() {
   print(x.a);
 }
 )");
+
+  PARSER_TEST("Toy Struct Program 2", R"(
+struct MyStruct {
+  var a; 
+  var b;
+}
+def func(MyStruct a, MyStruct b) {
+  return a.a + b.b;
+}
+
+def main() {
+  MyStruct x = {1, 2};
+  MyStruct y = {3, 4};
+  print(func(x, y));
+}
+)",
+              R"(
+struct MyStruct {
+  var a;
+  var b;
+}
+def func(MyStruct a, MyStruct b) {
+  return a.a + b.b;
+}
+def main() {
+  MyStruct x = {1, 2};
+  MyStruct y = {3, 4};
+  print(func(x, y));
+}
+)");
+
+  PARSER_TEST("Toy Struct Program 3", R"(
+struct Struct {
+  var a;
+  var b;
+}
+
+# User defined generic function may operate on struct types as well.
+def multiply_transpose(Struct value) {
+  # We can access the elements of a struct via the '.' operator.
+  return transpose(value.a) * transpose(value.b);
+}
+
+def main() {
+  # We initialize struct values using a composite initializer.
+  Struct value = {[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]};
+
+  # We pass these arguments to functions like we do with variables.
+  var c = multiply_transpose(value);
+  print(c);
+}
+)",
+              R"(
+struct Struct {
+  var a;
+  var b;
+}
+def multiply_transpose(Struct value) {
+  return transpose(value.a) * transpose(value.b);
+}
+def main() {
+  Struct value = {[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]};
+  var c = multiply_transpose(value);
+  print(c);
+})");
+
+  PARSER_TEST("Toy Struct Program 4", R"(
+struct X {
+  var x;
+  var y;
+}
+
+def multiply_x(X a, X b) {
+  return a.x * b.x;
+}
+def main() {
+  X a = {[1, 2, 3], [4, 5, 6]};
+  X b = {[7, 8, 9], [10, 11, 12]};
+  var c = multiply_x(a, b);
+  print(c);
+})",
+              R"(
+struct X {
+  var x;
+  var y;
+}
+def multiply_x(X a, X b) {
+  return a.x * b.x;
+}
+def main() {
+  X a = {[1, 2, 3], [4, 5, 6]};
+  X b = {[7, 8, 9], [10, 11, 12]};
+  var c = multiply_x(a, b);
+  print(c);
+}
+
+)");
 }
 
 } // namespace toy::test

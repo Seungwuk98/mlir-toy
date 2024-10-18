@@ -75,11 +75,42 @@ def main() {
 module {
   toy.func @main() {
     %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
-    %1 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
-    %2 = toy.cast %1 : tensor<2x3xf64> to tensor<*xf64>
-    %3 = toy.cast %0 : tensor<2x3xf64> to tensor<*xf64>
+    %1 = toy.cast %0 : tensor<2x3xf64> to tensor<*xf64>
+    %2 = toy.cast %0 : tensor<2x3xf64> to tensor<*xf64>
+    %3 = toy.transpose(%1 : tensor<*xf64>) to tensor<*xf64>
     %4 = toy.transpose(%2 : tensor<*xf64>) to tensor<*xf64>
-    %5 = toy.transpose(%3 : tensor<*xf64>) to tensor<*xf64>
+    %5 = toy.mul %3, %4 : tensor<*xf64>
+    toy.print %5 : tensor<*xf64>
+    toy.return
+  }
+}
+)");
+
+  MLIR_INLINE_PASS_TEST("Inline Tests 2", R"(
+struct X {
+  var x;
+  var y;
+}
+
+def multiply_x(X a, X b) {
+  return a.x * b.x;
+}
+def main() {
+  X a = {[1, 2, 3], [4, 5, 6]};
+  X b = {[7, 8, 9], [10, 11, 12]};
+  var c = multiply_x(a, b);
+  print(c);
+}
+)",
+                        R"(
+module {
+  toy.func @main() {
+    %0 = toy.struct_constant [dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>, dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+    %1 = toy.struct_constant [dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>, dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+    %2 = toy.cast %0 : !toy.struct<tensor<3xf64>, tensor<3xf64>> to !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %3 = toy.cast %1 : !toy.struct<tensor<3xf64>, tensor<3xf64>> to !toy.struct<tensor<*xf64>, tensor<*xf64>>
+    %4 = toy.struct_access %2[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+    %5 = toy.struct_access %3[0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
     %6 = toy.mul %4, %5 : tensor<*xf64>
     toy.print %6 : tensor<*xf64>
     toy.return
@@ -107,15 +138,40 @@ def main() {
 module {
   toy.func @main() {
     %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
-    %1 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
-    %2 = toy.transpose(%1 : tensor<2x3xf64>) to tensor<3x2xf64>
-    %3 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
-    %4 = toy.mul %2, %3 : tensor<3x2xf64>
-    toy.print %4 : tensor<3x2xf64>
+    %1 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+    %2 = toy.transpose(%0 : tensor<2x3xf64>) to tensor<3x2xf64>
+    %3 = toy.mul %1, %2 : tensor<3x2xf64>
+    toy.print %3 : tensor<3x2xf64>
     toy.return
   }
 }
+)");
 
+  MLIR_SI_PASS_TEST("Simple Shape Inference 2", R"(
+struct X {
+  var x;
+  var y;
+}
+
+def multiply_x(X a, X b) {
+  return a.x * b.x;
+}
+def main() {
+  X a = {[1, 2, 3], [4, 5, 6]};
+  X b = {[7, 8, 9], [10, 11, 12]};
+  var c = multiply_x(a, b);
+  print(c);
+})",
+                    R"(
+module {
+  toy.func @main() {
+    %0 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>
+    %1 = toy.constant dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>
+    %2 = toy.mul %0, %1 : tensor<3xf64>
+    toy.print %2 : tensor<3xf64>
+    toy.return
+  }
+}
 )");
 }
 

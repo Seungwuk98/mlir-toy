@@ -10,7 +10,8 @@ def ToyAST_Module : ToyAST { let treeMember = (ins Vector<Stmt> : $stmts); }
 def ToyAST_BlockStmt : ToyStmt { let treeMember = (ins Vector<Stmt> : $stmts); }
 
 def ToyAST_FuncDecl : ToyStmt {
-  let treeMember = (ins String : $name, SmallVector<String> : $params, "::toy::BlockStmt" : $body);
+  let treeMember = (ins String : $name, SmallVector<Pair<Optional<String>, String>> : $params, "::toy::BlockStmt" : $body);
+  let tag = (ins Map<SizeT, UserDefineType<"::toy::StructDecl">> : $paramStructDecls);
 }
 
 def ToyAST_StructDecl : ToyStmt {

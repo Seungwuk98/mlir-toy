@@ -27,5 +27,15 @@ def Toy_Dialect : Dialect {
 
 
   let useDefaultTypePrinterParser = 0;
+  let hasConstantMaterializer = 1;
+
+  let extraClassDeclaration = [{
+  private:
+
+  public:
+    Type parseType(DialectAsmParser &parser) const override;
+
+    void printType(Type, DialectAsmPrinter &) const override; 
+  }];
 }
 #endif // TOY_DIALECT_TD

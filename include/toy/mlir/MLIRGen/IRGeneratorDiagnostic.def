@@ -1,0 +1,18 @@
+#ifndef DIAG
+#define DIAG(ID, Kind, Msg)
+#endif
+
+DIAG(err_unmatched_function_args_count, Error,
+     "Unmatched function arguments count. expected: {0}, got: {1}")
+DIAG(err_undeclared_function, Error, "Undeclared function : {0}")
+DIAG(err_duplicated_function, Error, "Duplicated function : {0}")
+DIAG(err_duplicated_function_parameter, Error,
+     "Duplicated function parameter : {0}")
+DIAG(err_already_declared_varible, Error, "Already declared variable : {0}")
+DIAG(err_undeclared_variable, Error, "Undeclared variable : {0}")
+DIAG(err_expected_struct_type, Error, "Expected struct type. got: {0}")
+DIAG(err_undefined_field_name, Error,
+     "Undefined field name : {0} on struct type : {1}")
+DIAG(note_previous_declared_struct, Note, "Previous struct declaration here")
+
+#undef DIAG

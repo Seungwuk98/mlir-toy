@@ -17,4 +17,7 @@ DIAG(note_previous_declared_field_name, Note, "Already declared field here")
 DIAG(err_unmatched_struct_field_count, Error,
      "Unmatched struct field count. expected: {0}, got: {1}")
 DIAG(note_previous_struct_declaration, Note, "Previous struct declaration here")
+DIAG(err_unexpected_struct_init, Error,
+     "Unexpected tensor initialization. Only tensor or number are allowed")
+DIAG(err_undeclared_struct_type, Error, "Undeclared struct type : {0}")
 #undef DIAG

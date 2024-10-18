@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <format>
 
 #define STR_EQ(E, R) CHECK(::toy::test::StringCompare(E, R))

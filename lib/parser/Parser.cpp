@@ -87,10 +87,32 @@ FuncDecl Parser::parseFunctionDecl() {
   if (!blockStmt)
     return nullptr;
 
-  auto paramList = llvm::map_to_vector(
-      *params, [](llvm::StringRef param) { return param.str(); });
-  return FuncDecl::create(scope.CreateRange(), context, id->getSymbol(),
-                          paramList, blockStmt);
+  llvm::DenseMap<std::size_t, StructDecl> structTag;
+  llvm::SmallVector<std::pair<std::optional<std::string>, std::string>>
+      paramList;
+  paramList.reserve(params->size());
+
+  for (const auto &[idx, param] : llvm::enumerate(*params)) {
+    const auto &[structOpt, name] = param;
+    if (param.first) {
+      if (auto iter = structTable.find(param.first->str());
+          iter != structTable.end()) {
+        structTag.try_emplace(idx, iter->second);
+      } else {
+        Report(id->getRange(), Reporter::Diag::err_undeclared_struct_type,
+               param.first->str());
+        return nullptr;
+      }
+    }
+
+    paramList.emplace_back(
+        structOpt ? std::optional(structOpt->str()) : std::nullopt, name.str());
+  }
+
+  auto funDecl = FuncDecl::create(scope.CreateRange(), context, id->getSymbol(),
+                                  paramList, blockStmt);
+  funDecl.setParamStructDeclsTag(structTag);
+  return funDecl;
 }
 
 #define RECOVERY                                                               \
@@ -323,6 +345,12 @@ StructVarDecl Parser::parseStructVarDecl() {
     return nullptr;
   }
 
+  if (llvm::any_of(exprs,
+                   [](Expr expr) { return !expr.isa<Number, Tensor>(); })) {
+    Report(exprs.front().getLoc(), Reporter::Diag::err_unexpected_struct_init);
+    return nullptr;
+  }
+
   auto structVarDecl = StructVarDecl::create(scope.CreateRange(), context,
                                              structName, varName, exprs);
   structVarDecl.setStructDeclTag(structDecl);
@@ -523,20 +551,38 @@ Expr Parser::parseBuiltinFunction() {
   llvm_unreachable("All builtin functions are handled");
 }
 
-std::optional<llvm::SmallVector<llvm::StringRef>> Parser::parseParamList() {
+std::optional<llvm::SmallVector<
+    std::pair<std::optional<llvm::StringRef>, llvm::StringRef>>>
+Parser::parseParamList() {
   if (Peek()->is<Token::Tok_rparen>())
-    return llvm::SmallVector<llvm::StringRef>();
+    return llvm::SmallVector<
+        std::pair<std::optional<llvm::StringRef>, llvm::StringRef>>{};
 
-  llvm::SmallVector<llvm::StringRef> params;
+  llvm::SmallVector<std::pair<std::optional<llvm::StringRef>, llvm::StringRef>>
+      params;
   if (Consume<Token::Tok_identifier>())
     return std::nullopt;
-  params.emplace_back(Tok->getSymbol());
+  if (structTable.contains(Tok->getSymbol())) {
+    auto structName = Tok->getSymbol();
+    if (Consume<Token::Tok_identifier>())
+      return std::nullopt;
+    auto varName = Tok->getSymbol();
+    params.emplace_back(structName, varName);
+  } else
+    params.emplace_back(std::nullopt, Tok->getSymbol());
 
   while (Peek()->is<Token::Tok_comma>()) {
     Skip();
     if (Consume<Token::Tok_identifier>())
       return std::nullopt;
-    params.emplace_back(Tok->getSymbol());
+    if (structTable.contains(Tok->getSymbol())) {
+      auto structName = Tok->getSymbol();
+      if (Consume<Token::Tok_identifier>())
+        return std::nullopt;
+      auto varName = Tok->getSymbol();
+      params.emplace_back(structName, varName);
+    } else
+      params.emplace_back(std::nullopt, Tok->getSymbol());
   }
 
   return params;

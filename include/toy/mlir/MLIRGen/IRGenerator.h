@@ -13,9 +13,19 @@
 #include "toy/reporter/DiagnosticReporter.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
 
 namespace toy {
+
+struct ToyValue {
+
+  ToyValue() = default;
+  ToyValue(mlir::Value V, StructDecl D) : V(V), D(D) {}
+
+  mlir::Value V;
+  StructDecl D;
+};
 
 class IRGenerator : public ast::VisitorBase<IRGenerator
 #define AST_TABLEGEN_ID(ID) , ID
@@ -37,6 +47,24 @@ public:
 
   mlir::OwningOpRef<mlir::ModuleOp> getModuleOp() { return module.release(); }
 
+  struct Reporter {
+    enum Diag {
+#define DIAG(ID, ...) ID,
+#include "toy/mlir/MLIRGen/IRGeneratorDiagnostic.def"
+    };
+
+    static llvm::SourceMgr::DiagKind getDiagKind(Diag diag);
+    static llvm::StringLiteral getDiagMsg(Diag diag);
+  };
+
+  template <typename... Args>
+  void Report(llvm::SMRange loc, Reporter::Diag diag, Args &&...args) {
+    auto kind = Reporter::getDiagKind(diag);
+    auto msg = Reporter::getDiagMsg(diag);
+    auto evaledMsg = llvm::formatv(msg.data(), std::forward<Args>(args)...);
+    reporter.Report(loc, kind, evaledMsg.str());
+  }
+
 private:
   mlir::Location getLoc(llvm::SMLoc loc) {
     auto bufID = srcMgr.FindBufferContainingLoc(loc);
@@ -57,11 +85,11 @@ private:
   DiagnosticReporter &reporter;
   mlir::OwningOpRef<mlir::ModuleOp> module;
 
-  llvm::ScopedHashTable<llvm::StringRef, mlir::Value> symbolTable;
+  llvm::ScopedHashTable<llvm::StringRef, ToyValue> symbolTable;
   llvm::DenseMap<llvm::StringRef, mlir::FunctionType> functionDeclarations;
-  mlir::Value result;
+  ToyValue result;
 
-  using ScopeTy = llvm::ScopedHashTable<llvm::StringRef, mlir::Value>::ScopeTy;
+  using ScopeTy = llvm::ScopedHashTable<llvm::StringRef, ToyValue>::ScopeTy;
 };
 
 } // namespace toy

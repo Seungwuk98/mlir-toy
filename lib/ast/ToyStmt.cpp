@@ -34,7 +34,10 @@ void FuncDecl::print(toy::FuncDecl ast, ::ast::ASTPrinter &printer) {
        ++I) {
     if (I != ast.getParams().begin())
       printer.OS() << ", ";
-    printer.OS() << *I;
+    const auto &[structOpt, name] = *I;
+    if (structOpt)
+      printer.OS() << *structOpt << ' ';
+    printer.OS() << name;
   }
   printer.OS() << ") ";
   BlockStmt::print(ast.getBody(), printer);

@@ -1,3 +1,4 @@
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
@@ -55,13 +56,32 @@ public:
 private:
   static bool areAllShapesKnown(Operation *op) {
     return llvm::all_of(op->getOperands(), [](Value operand) {
-      return operand.getType().isa<RankedTensorType>();
+      if (operand.getType().isa<RankedTensorType>())
+        return true;
+      if (auto structType = operand.getType().dyn_cast<StructType>())
+        return areAllShapeKnown(structType);
+      return false;
     });
+  }
+
+  static bool areAllShapeKnown(StructType type) {
+    return llvm::all_of(type.getElementTypes(),
+                        [](Type type) { return type.isa<RankedTensorType>(); });
   }
 
   static bool mustBeInferred(Operation *op) {
     return llvm::any_of(op->getResults(), [](Value result) {
-      return result.getType().isa<UnrankedTensorType>();
+      if (result.getType().isa<UnrankedTensorType>())
+        return true;
+      if (auto structType = result.getType().dyn_cast<StructType>())
+        return mustBeInferred(structType);
+      return false;
+    });
+  }
+
+  static bool mustBeInferred(StructType type) {
+    return llvm::any_of(type.getElementTypes(), [](Type type) {
+      return type.isa<UnrankedTensorType>();
     });
   }
 };

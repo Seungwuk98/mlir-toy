@@ -107,7 +107,9 @@ private:
   Expr parseBuiltinFunction();
 
   /// <param list> ::= <identifier> (`,` <identifier>)*
-  std::optional<llvm::SmallVector<llvm::StringRef>> parseParamList();
+  std::optional<llvm::SmallVector<
+      std::pair<std::optional<llvm::StringRef>, llvm::StringRef>>>
+  parseParamList();
 
   /// <shape list> ::= <number> (`,` <number>)*
   std::optional<ShapeInfo> parseShapeList();

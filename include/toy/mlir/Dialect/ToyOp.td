@@ -164,7 +164,7 @@ def GenericCallOp : Toy_Op<"generic_call", [
     arguments.
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<F64Tensor>:$inputs);
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<Toy_Type>:$inputs);
   let results = (outs F64Tensor);
 
   let assemblyFormat = [{
@@ -195,8 +195,8 @@ def CastOp : Toy_Op<"cast",[
     mismatching constant dimension.
   }];
 
-  let arguments = (ins F64Tensor:$input);
-  let results = (outs F64Tensor:$output);
+  let arguments = (ins Toy_Type:$input);
+  let results = (outs Toy_Type:$output);
 
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
 }
@@ -330,7 +330,7 @@ def StructConstantOp : Toy_Op<"struct_constant", [Pure, ConstantLike]> {
 /// Struct Access 
 //===----------------------------------------------------------------------===//
 
-def StructAccessOp : Toy_Op<"struct_access", [Pure]> {
+def StructAccessOp : Toy_Op<"struct_access", [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "struct access operation";
   let description = [{
     Access the Nth element of a value returning a struct type.

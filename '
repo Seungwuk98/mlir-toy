@@ -87,20 +87,20 @@ void IRGenerator::visit(FunctionCall expr) {
       iter != functionDeclarations.end()) {
     funcType = iter->second;
   } else {
-    Report(expr.getLoc(), Reporter::Diag::err_undeclared_function, callee);
+    /// TODO report
     return;
   }
 
   auto args = expr.getArgs();
   if (args.size() != funcType.getNumInputs()) {
-    Report(expr.getLoc(), Reporter::Diag::err_unmatched_function_args_count,
-           funcType.getNumInputs(), args.size());
+    /// TODO report
     return;
   }
 
   llvm::SmallVector<mlir::Value> argValues;
   argValues.reserve(args.size());
   for (auto arg : args) {
+    llvm::errs() << arg.toString() << '\n';
     arg.accept(*this);
     if (reporter.getErrorCount())
       return;
@@ -112,8 +112,8 @@ void IRGenerator::visit(FunctionCall expr) {
     resultV = builder.create<mlir::toy::GenericCallOp>(getLoc(expr), callee,
                                                        argValues);
   else
-    builder.create<mlir::toy::GenericCallOp>(getLoc(expr), mlir::TypeRange{},
-                                             callee, argValues);
+    resultV = builder.create<mlir::toy::GenericCallOp>(
+        getLoc(expr), mlir::TypeRange{}, callee, argValues);
 
   result = {resultV, nullptr};
 }
@@ -121,11 +121,11 @@ void IRGenerator::visit(FunctionCall expr) {
 void IRGenerator::visit(Identifier expr) {
   if (symbolTable.count(expr.getName())) {
     result = symbolTable.lookup(expr.getName());
+    llvm::errs() << "lookup: " << expr.getName() << "\n";
+    llvm::errs() << result.V << '\n';
     return;
   }
-
-  Report(expr.getLoc(), Reporter::Diag::err_undeclared_variable,
-         expr.getName());
+  /// TODO report
 }
 
 void IRGenerator::visit(Transpose expr) {
@@ -157,8 +157,7 @@ void IRGenerator::visit(StructAccess expr) {
   auto targetV = result.V;
 
   if (!targetV.getType().isa<mlir::toy::StructType>()) {
-    Report(expr.getLoc(), Reporter::Diag::err_expected_struct_type,
-           targetV.getType());
+    /// TODO report
     return;
   }
 
@@ -167,9 +166,7 @@ void IRGenerator::visit(StructAccess expr) {
 
   auto fieldIter = llvm::find(structDecl.getFields(), field);
   if (fieldIter == structDecl.getFields().end()) {
-    Report(expr.getLoc(), Reporter::Diag::err_undefined_field_name, field,
-           structDecl.getName());
-    Report(structDecl.getLoc(), Reporter::Diag::note_previous_declared_struct);
+    /// TODO report
     return;
   }
 
@@ -238,8 +235,7 @@ void IRGenerator::visit(FuncDecl stmt) {
       argTypes, returnType ? returnType : mlir::TypeRange{});
   auto inserted = functionDeclarations.try_emplace(functionName, funcType);
   if (!inserted.second) {
-    Report(stmt.getLoc(), Reporter::Diag::err_duplicated_function,
-           functionName);
+    /// TODO report
     return;
   }
 
@@ -256,8 +252,7 @@ void IRGenerator::visit(FuncDecl stmt) {
     const auto &[structOpt, name] = param;
 
     if (symbolTable.count(name)) {
-      Report(stmt.getLoc(), Reporter::Diag::err_duplicated_function_parameter,
-             name);
+      /// TODO report
       return;
     }
 
@@ -281,8 +276,7 @@ void IRGenerator::visit(StructDecl stmt) {
 void IRGenerator::visit(VarDecl stmt) {
   auto varName = stmt.getName();
   if (symbolTable.count(varName)) {
-    Report(stmt.getLoc(), Reporter::Diag::err_already_declared_varible,
-           varName);
+    /// TODO report
     return;
   }
 
@@ -302,8 +296,7 @@ void IRGenerator::visit(StructVarDecl stmt) {
   auto structDecl = stmt.getStructDeclTag();
   auto varName = stmt.getName();
   if (symbolTable.count(varName)) {
-    Report(stmt.getLoc(), Reporter::Diag::err_already_declared_varible,
-           varName);
+    /// TODO report
     return;
   }
 
@@ -323,11 +316,16 @@ void IRGenerator::visit(StructVarDecl stmt) {
     auto value = result.V;
 
     llvm::SmallVector<mlir::OpFoldResult> structElements;
-    auto foldSuccess = value.getDefiningOp()->fold(structElements);
-    assert(mlir::succeeded(foldSuccess) && "expected constant value");
-    assert(structElements.size() == 1 &&
-           llvm::isa<mlir::Attribute>(structElements[0]) &&
-           "expected constant value");
+    if (mlir::failed(value.getDefiningOp()->fold(structElements))) {
+      /// TODO report
+      return;
+    }
+
+    if (structElements.size() != 1 ||
+        !llvm::isa<mlir::Attribute>(structElements[0])) {
+      /// TODO report
+      return;
+    }
     elements.emplace_back(llvm::cast<mlir::Attribute>(structElements[0]));
     elementTypes.emplace_back(value.getType());
   }
@@ -337,7 +335,6 @@ void IRGenerator::visit(StructVarDecl stmt) {
   result.V = builder.create<mlir::toy::StructConstantOp>(getLoc(stmt),
                                                          structType, arrayAttr);
   result.D = structDecl;
-  symbolTable.insert(varName, result);
 }
 
 void IRGenerator::visit(ExprStmt stmt) { stmt.getExpr().accept(*this); }
@@ -351,24 +348,6 @@ void IRGenerator::visit(ReturnStmt stmt) {
     return;
   }
   builder.create<mlir::toy::ReturnOp>(getLoc(stmt), mlir::ValueRange{});
-}
-
-static llvm::SourceMgr::DiagKind irGenDiagKinds[] = {
-#define DIAG(ID, Kind, Msg) llvm::SourceMgr::DK_##Kind,
-#include "toy/mlir/MLIRGen/IRGeneratorDiagnostic.def"
-};
-
-static llvm::StringLiteral irGenDiagMsg[] = {
-#define DIAG(ID, Kind, Msg) Msg,
-#include "toy/mlir/MLIRGen/IRGeneratorDiagnostic.def"
-};
-
-llvm::SourceMgr::DiagKind IRGenerator::Reporter::getDiagKind(Diag diag) {
-  return irGenDiagKinds[diag];
-}
-
-llvm::StringLiteral IRGenerator::Reporter::getDiagMsg(Diag diag) {
-  return irGenDiagMsg[diag];
 }
 
 } // namespace toy

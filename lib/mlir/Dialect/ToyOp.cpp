@@ -203,14 +203,20 @@ bool CastOp::areCastCompatible(::mlir::TypeRange inputs,
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
 
-  auto inputType = inputs.front().dyn_cast<TensorType>();
-  auto outputType = outputs.front().dyn_cast<TensorType>();
-  if (!inputType || !outputType ||
-      inputType.getElementType() != outputType.getElementType())
-    return false;
+  auto inputTensorType = inputs.front().dyn_cast<TensorType>();
+  auto outputTensorType = outputs.front().dyn_cast<TensorType>();
+  if (inputTensorType && outputTensorType &&
+      inputTensorType.getElementType() == outputTensorType.getElementType())
+    return !inputTensorType.hasRank() || !outputTensorType.hasRank() ||
+           inputTensorType == outputTensorType;
 
-  return !inputType.hasRank() || !outputType.hasRank() ||
-         inputType == outputType;
+  auto inputStructType = inputs.front().dyn_cast<StructType>();
+  auto outputStructType = outputs.front().dyn_cast<StructType>();
+  if (inputStructType && outputStructType &&
+      inputStructType.size() == outputStructType.size())
+    return true;
+
+  return false;
 }
 
 void CastOp::inferShapes() { getResult().setType(getInput().getType()); }
@@ -317,6 +323,12 @@ LogicalResult StructAccessOp::verify() {
     return emitOpError("result type mismatch. expected : ")
            << structType.getType(index) << ", got : " << resultType;
   return success();
+}
+
+void StructAccessOp::inferShapes() {
+  auto inputType = getOperand().getType().cast<StructType>();
+  auto resultType = inputType.getType(getIndex());
+  getResult().setType(resultType);
 }
 
 } // namespace mlir::toy
