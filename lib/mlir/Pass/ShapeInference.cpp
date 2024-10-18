@@ -4,7 +4,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "toy/mlir/Dialect/ToyOp.h"
-#include <llvm-18/llvm/ADT/SmallPtrSet.h>
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace mlir::toy {
 #include "toy/mlir/Dialect/ToyInterface.cpp.inc"

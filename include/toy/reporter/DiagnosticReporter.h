@@ -1,9 +1,9 @@
 #ifndef TOY_DIAGNOSTIC_REPORTER_H
 #define TOY_DIAGNOSTIC_REPORTER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
-#include <llvm-18/llvm/ADT/StringRef.h>
-#include <llvm-18/llvm/Support/raw_ostream.h>
+#include "llvm/Support/raw_ostream.h"
 
 namespace toy {
 

@@ -1,6 +1,6 @@
 #include "toy/parser/Lexer.h"
-#include <llvm-18/llvm/ADT/StringSwitch.h>
-#include <llvm-18/llvm/Support/SourceMgr.h>
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/SourceMgr.h"
 
 namespace toy {
 
