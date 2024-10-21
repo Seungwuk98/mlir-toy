@@ -114,7 +114,8 @@ private:
   /// <shape list> ::= <number> (`,` <number>)*
   std::optional<ShapeInfo> parseShapeList();
 
-  void recovery(bool allowFunction = true);
+  template <Token::Kind... BreakPoints>
+  void recovery(bool breakAtSemicolon = true);
 
   bool tensorConstantSema(Tensor tensor);
 
@@ -176,6 +177,22 @@ template <Token::Kind Kind> bool Parser::ConsumeIf() {
     return true;
   }
   return false;
+}
+
+template <Token::Kind... BreakPoints>
+void Parser::recovery(bool breakAtSemicolon) {
+  while (true) {
+    auto peekTok = Peek();
+    if (peekTok->is<Token::Tok_EOF, BreakPoints...>())
+      return;
+
+    if (breakAtSemicolon && peekTok->is<Token::Tok_semicolon>()) {
+      Skip();
+      return;
+    }
+
+    Skip();
+  }
 }
 
 } // namespace toy

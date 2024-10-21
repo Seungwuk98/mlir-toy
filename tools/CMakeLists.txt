@@ -39,3 +39,5 @@ target_link_libraries(
   ${conversion_libs}
   ${extension_libs}
 )
+
+set(TOY_TOOLS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "")

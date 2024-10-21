@@ -1,0 +1,30 @@
+# RUN: toyc %s -action=token | FileCheck %s
+def main() {
+  var a = [1, 2, 3, 4, 5, 6];
+}
+
+# CHECK-LABEL: def `def` at 1:0
+# CHECK-NEXT: identifier `main` at 1:4
+# CHECK-NEXT: lparen `(` at 1:8
+# CHECK-NEXT: rparen `)` at 1:9
+# CHECK-NEXT: lbrace `{` at 1:11
+# CHECK-NEXT: var `var` at 2:2
+# CHECK-NEXT: identifier `a` at 2:6
+# CHECK-NEXT: equal `=` at 2:8
+# CHECK-NEXT: lbracket `[` at 2:10
+# CHECK-NEXT: number `1` at 2:11
+# CHECK-NEXT: comma `,` at 2:12
+# CHECK-NEXT: number `2` at 2:14
+# CHECK-NEXT: comma `,` at 2:15
+# CHECK-NEXT: number `3` at 2:17
+# CHECK-NEXT: comma `,` at 2:18
+# CHECK-NEXT: number `4` at 2:20
+# CHECK-NEXT: comma `,` at 2:21
+# CHECK-NEXT: number `5` at 2:23
+# CHECK-NEXT: comma `,` at 2:24
+# CHECK-NEXT: number `6` at 2:26
+# CHECK-NEXT: rbracket `]` at 2:27
+# CHECK-NEXT: semicolon `;` at 2:28
+# CHECK-NEXT: rbrace `}` at 3:0
+# CHECK-NEXT: EOF 
+

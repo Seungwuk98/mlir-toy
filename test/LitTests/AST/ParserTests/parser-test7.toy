@@ -1,0 +1,18 @@
+# RUN: toyc %s -action=ast | FileCheck %s 
+
+struct MyStruct {
+  var a;
+  var b;
+}
+
+def main() {
+  MyStruct x = {1, 2};
+  print(x.a);
+}
+
+# CHECK-LABEL: struct MyStruct {
+# CHECK-NEXT:  var a;
+# CHECK-NEXT:  var b;
+# CHECK-NEXT: }
+
+

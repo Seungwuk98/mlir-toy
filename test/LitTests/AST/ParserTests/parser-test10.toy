@@ -1,0 +1,37 @@
+# RUN: toyc %s -action=ast | FileCheck %s 
+
+
+struct Struct {
+  var a;
+  var b;
+}
+
+# User defined generic function may operate on struct types as well.
+def multiply_transpose(Struct value) {
+  # We can access the elements of a struct via the '.' operator.
+  return transpose(value.a) * transpose(value.b);
+}
+
+def main() {
+  # We initialize struct values using a composite initializer.
+  Struct value = {[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]};
+
+  # We pass these arguments to functions like we do with variables.
+  var c = multiply_transpose(value);
+  print(c);
+}
+
+# CHECK-LABEL: struct Struct {
+# CHECK-NEXT:  var a;
+# CHECK-NEXT:  var b;
+# CHECK-NEXT: }
+
+# CHECK-LABEL: def multiply_transpose(Struct value) {
+# CHECK-NEXT:   return transpose(value.a) * transpose(value.b);
+# CHECK-NEXT: }
+
+# CHECK-LABEL: def main() {
+# CHECK-NEXT:   Struct value = {{{\[\[}}1, 2, 3], [4, 5, 6]], {{\[\[}}1, 2, 3], [4, 5, 6]]};
+# CHECK-NEXT:   var c = multiply_transpose(value);
+# CHECK-NEXT:   print(c);
+# CHECK-NEXT: }

@@ -1,0 +1,60 @@
+# RUN: toyc %s -action=toy | FileCheck %s --check-prefix=TOY 
+# RUN: toyc %s -action=affine | FileCheck %s --check-prefix=AFFINE
+
+def main() {
+  var a = [1, 2, 3, 4, 5, 6];
+  var b = [6, 5, 4, 3, 2, 1];
+  print(a + b);
+}
+
+# TOY-LABEL: toy.func @main()
+# TOY-NEXT:   [[VAL_0:%.*]] = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+# TOY-NEXT:   [[VAL_1:%.*]] = toy.constant dense<[6.000000e+00, 5.000000e+00, 4.000000e+00, 3.000000e+00, 2.000000e+00, 1.000000e+00]> : tensor<6xf64>
+# TOY-NEXT:   [[VAL_2:%.*]] = toy.add [[VAL_0]], [[VAL_1]] : (tensor<6xf64>, tensor<6xf64>) -> tensor<*xf64>
+# TOY-NEXT:   toy.print [[VAL_2]] : tensor<*xf64>
+# TOY-NEXT:   toy.return
+
+
+
+# AFFINE-LABEL:  func.func @main() {
+# AFFINE-NEXT:    [[ALLOC_ADD:%.*]] = memref.alloc() : memref<6xf64>
+# AFFINE-NEXT:    [[ALLOC_CONSTNAT_1:%.*]] = memref.alloc() : memref<6xf64>
+# AFFINE-NEXT:    [[ALLOC_CONSTANT:%.*]] = memref.alloc() : memref<6xf64>
+# AFFINE-NEXT:    [[C0:%.*]] = arith.constant 0 : index
+# AFFINE-NEXT:    [[C1:%.*]] = arith.constant 1 : index
+# AFFINE-NEXT:    [[C2:%.*]] = arith.constant 2 : index
+# AFFINE-NEXT:    [[C3:%.*]] = arith.constant 3 : index
+# AFFINE-NEXT:    [[C4:%.*]] = arith.constant 4 : index
+# AFFINE-NEXT:    [[C5:%.*]] = arith.constant 5 : index
+# AFFINE-NEXT:    [[F1:%.*]] = arith.constant 1.000000e+00 : f64
+# AFFINE-NEXT:    [[F2:%.*]] = arith.constant 2.000000e+00 : f64
+# AFFINE-NEXT:    [[F3:%.*]] = arith.constant 3.000000e+00 : f64
+# AFFINE-NEXT:    [[F4:%.*]] = arith.constant 4.000000e+00 : f64
+# AFFINE-NEXT:    [[F5:%.*]] = arith.constant 5.000000e+00 : f64
+# AFFINE-NEXT:    [[F6:%.*]] = arith.constant 6.000000e+00 : f64
+# AFFINE-NEXT:    affine.store [[F1]], [[ALLOC_CONSTANT]][[[C0]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F2]], [[ALLOC_CONSTANT]][[[C1]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F3]], [[ALLOC_CONSTANT]][[[C2]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F4]], [[ALLOC_CONSTANT]][[[C3]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F5]], [[ALLOC_CONSTANT]][[[C4]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F6]], [[ALLOC_CONSTANT]][[[C5]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F6]], [[ALLOC_CONSTNAT_1]][[[C0]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F5]], [[ALLOC_CONSTNAT_1]][[[C1]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F4]], [[ALLOC_CONSTNAT_1]][[[C2]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F3]], [[ALLOC_CONSTNAT_1]][[[C3]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F2]], [[ALLOC_CONSTNAT_1]][[[C4]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F1]], [[ALLOC_CONSTNAT_1]][[[C5]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.for [[IV:%.*]] = 0 to 6 {
+# AFFINE-NEXT:      [[ADD_L:%.*]] = affine.load [[ALLOC_CONSTANT]][%arg0] : memref<6xf64>
+# AFFINE-NEXT:      [[ADD_R:%.*]] = affine.load [[ALLOC_CONSTNAT_1]][%arg0] : memref<6xf64>
+# AFFINE-NEXT:      [[ADD:%.*]] = arith.addf %0, %1 : f64
+# AFFINE-NEXT:      memref.store [[ADD]], [[ALLOC_ADD]][[[IV]]] : memref<6xf64>
+# AFFINE-NEXT:    }
+# AFFINE-NEXT:    toy.print [[ALLOC_ADD]] : memref<6xf64>
+# AFFINE-NEXT:    memref.dealloc [[ALLOC_CONSTANT]] : memref<6xf64>
+# AFFINE-NEXT:    memref.dealloc [[ALLOC_CONSTNAT_1]] : memref<6xf64>
+# AFFINE-NEXT:    memref.dealloc [[ALLOC_ADD]] : memref<6xf64>
+# AFFINE-NEXT:    return
+# AFFINE-NEXT:  }
+
+

@@ -19,6 +19,11 @@ public:
     SM.PrintMessage(OS, loc.Start, diagKind, msg, {loc});
   }
 
+  void Report(llvm::StringRef msg) {
+    ++ErrorCount;
+    OS << msg << '\n';
+  }
+
   std::size_t getErrorCount() const { return ErrorCount; }
   llvm::SourceMgr &getSourceMgr() { return SM; }
 

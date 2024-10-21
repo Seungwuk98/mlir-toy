@@ -1,0 +1,42 @@
+# RUN: toyc %s -action=toy | FileCheck %s
+
+struct X {
+  var x;
+  var y;
+}
+
+def multiply_x(X a, X b) {
+# CHECK-LABEL:  toy.func private @multiply_x(
+# CHECK-SAME:                                [[X_ARG_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>, 
+# CHECK-SAME:                                [[X_ARG_1:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64> 
+  return a.x * b.x;
+# CHECK-NEXT:    [[X_0:%.*]] = toy.struct_access [[X_ARG_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# CHECK-NEXT:    [[X_1:%.*]] = toy.struct_access [[X_ARG_1]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# CHECK-NEXT:    [[X_2:%.*]] = toy.mul [[X_0]], [[X_1]] : tensor<*xf64>
+# CHECK-NEXT:    toy.return [[X_2]] : tensor<*xf64>
+}
+      
+
+
+def main() {
+# CHECK-LABEL: toy.func @main() 
+  X a = {[1, 2, 3], [4, 5, 6]};
+# CHECK-NEXT:    [[M_0:%.*]] = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>
+# CHECK-NEXT:    [[M_1:%.*]] = toy.constant dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>
+# CHECK-NEXT:    [[M_2:%.*]] = toy.struct_constant [dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>, dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+
+  X b = {[7, 8, 9], [10, 11, 12]};
+# CHECK-NEXT:    [[M_3:%.*]] = toy.constant dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>
+# CHECK-NEXT:    [[M_4:%.*]] = toy.constant dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>
+# CHECK-NEXT:    [[M_5:%.*]] = toy.struct_constant [dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>, dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+  var c = multiply_x(a, b);
+# CHECK-NEXT:    [[M_6:%.*]] = toy.generic_call @multiply_x([[M_2]], [[M_5]]) : (!toy.struct<tensor<3xf64>, tensor<3xf64>>, !toy.struct<tensor<3xf64>, tensor<3xf64>>) -> tensor<*xf64>
+  print(c);
+# CHECK-NEXT:    toy.print [[M_6]] : tensor<*xf64>
+# CHECK-NEXT:    toy.return
+}
+
+
+
+
+

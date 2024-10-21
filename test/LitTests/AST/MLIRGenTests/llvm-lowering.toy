@@ -1,0 +1,108 @@
+# RUN: toyc %s -action=affine | FileCheck %s --check-prefix=AFFINE
+# RUN: toyc %s -action=llvm | FileCheck %s --check-prefix=LLVM
+
+def main() {
+  print([1, 2, 3, 4, 5, 6]);
+}
+
+# AFFINE-LABEL:  func.func @main() {
+# AFFINE-NEXT:    [[ALLOC_CONSTANT:%.*]] = memref.alloc() : memref<6xf64>
+# AFFINE-NEXT:    [[C0:%.*]] = arith.constant 0 : index
+# AFFINE-NEXT:    [[C1:%.*]] = arith.constant 1 : index
+# AFFINE-NEXT:    [[C2:%.*]] = arith.constant 2 : index
+# AFFINE-NEXT:    [[C3:%.*]] = arith.constant 3 : index
+# AFFINE-NEXT:    [[C4:%.*]] = arith.constant 4 : index
+# AFFINE-NEXT:    [[C5:%.*]] = arith.constant 5 : index
+# AFFINE-NEXT:    [[F1:%.*]] = arith.constant 1.000000e+00 : f64
+# AFFINE-NEXT:    [[F2:%.*]] = arith.constant 2.000000e+00 : f64
+# AFFINE-NEXT:    [[F3:%.*]] = arith.constant 3.000000e+00 : f64
+# AFFINE-NEXT:    [[F4:%.*]] = arith.constant 4.000000e+00 : f64
+# AFFINE-NEXT:    [[F5:%.*]] = arith.constant 5.000000e+00 : f64
+# AFFINE-NEXT:    [[F6:%.*]] = arith.constant 6.000000e+00 : f64
+# AFFINE-NEXT:    affine.store [[F1]], [[ALLOC_CONSTANT]][[[C0]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F2]], [[ALLOC_CONSTANT]][[[C1]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F3]], [[ALLOC_CONSTANT]][[[C2]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F4]], [[ALLOC_CONSTANT]][[[C3]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F5]], [[ALLOC_CONSTANT]][[[C4]]] : memref<6xf64>
+# AFFINE-NEXT:    affine.store [[F6]], [[ALLOC_CONSTANT]][[[C5]]] : memref<6xf64>
+# AFFINE-NEXT:    toy.print [[ALLOC_CONSTANT]] : memref<6xf64>
+# AFFINE-NEXT:    memref.dealloc [[ALLOC_CONSTANT]] : memref<6xf64>
+# AFFINE-NEXT:    return
+# AFFINE-NEXT:  }
+
+
+# LLVM-LABEL: module {
+# LLVM-DAG:   llvm.func @free(!llvm.ptr)
+# LLVM-DAG:   llvm.mlir.global internal constant @"@printf.newline"("\0A\00") {addr_space = 0 : i32}
+# LLVM-DAG:   llvm.mlir.global internal constant @"@printf.float.space"("%f \00") {addr_space = 0 : i32}
+# LLVM-DAG:   llvm.mlir.global internal constant @"@printf.float"("%f\00") {addr_space = 0 : i32}
+# LLVM-DAG:   llvm.func @printf(!llvm.ptr, ...) -> i32
+# LLVM-DAG:   llvm.func @malloc(i64) -> !llvm.ptr
+#
+# LLVM-NEXT:  llvm.func @main() {
+# LLVM-NEXT:    [[C6:%.*]] = llvm.mlir.constant(6 : index) : i64
+# LLVM-NEXT:    [[C1:%.*]] = llvm.mlir.constant(1 : index) : i64
+# LLVM-NEXT:    [[NULL:%.*]] = llvm.mlir.zero : !llvm.ptr
+# LLVM-NEXT:    [[ELEM_PTR:%.*]] = llvm.getelementptr [[NULL]][[[C6]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    [[MALLOC_SIZE:%.*]] = llvm.ptrtoint [[ELEM_PTR]] : !llvm.ptr to i64
+# LLVM-NEXT:    [[MALLOC:%.*]] = llvm.call @malloc([[MALLOC_SIZE]]) : (i64) -> !llvm.ptr
+# LLVM-NEXT:    [[MEMREF:%.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+# LLVM-NEXT:    [[MEMREF_2:%.*]] = llvm.insertvalue [[MALLOC]], [[MEMREF]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[MEMREF_3:%.*]] = llvm.insertvalue [[MALLOC]], [[MEMREF_2]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[C0:%.*]] = llvm.mlir.constant(0 : index) : i64
+# LLVM-NEXT:    [[MEMREF_4:%.*]] = llvm.insertvalue [[C0]], [[MEMREF_3]][2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[MEMREF_5:%.*]] = llvm.insertvalue [[C6]], [[MEMREF_4]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[MEMREF_6:%.*]] = llvm.insertvalue [[C1]], [[MEMREF_5]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[C2:%.*]] = llvm.mlir.constant(2 : index) : i64
+# LLVM-NEXT:    [[C3:%.*]] = llvm.mlir.constant(3 : index) : i64
+# LLVM-NEXT:    [[C4:%.*]] = llvm.mlir.constant(4 : index) : i64
+# LLVM-NEXT:    [[C5:%.*]] = llvm.mlir.constant(5 : index) : i64
+# LLVM-NEXT:    [[F1:%.*]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[F2:%.*]] = llvm.mlir.constant(2.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[F3:%.*]] = llvm.mlir.constant(3.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[F4:%.*]] = llvm.mlir.constant(4.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[F5:%.*]] = llvm.mlir.constant(5.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[F6:%.*]] = llvm.mlir.constant(6.000000e+00 : f64) : f64
+# LLVM-NEXT:    [[DATA_MEMORY:%.*]] = llvm.extractvalue [[MEMREF_6]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    [[DATA_0_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C0]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F1]], [[DATA_0_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[DATA_1_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F2]], [[DATA_1_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[DATA_2_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C2]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F3]], [[DATA_2_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[DATA_3_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C3]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F4]], [[DATA_3_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[DATA_4_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C4]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F5]], [[DATA_4_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[DATA_5_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[C5]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    llvm.store [[F6]], [[DATA_5_PTR]] : f64, !llvm.ptr
+# LLVM-NEXT:    [[FLOAT_FMT_STR_PTR:%.*]] = llvm.mlir.addressof @"@printf.float" : !llvm.ptr
+# LLVM-NEXT:    [[C0_i64:%.*]] = llvm.mlir.constant(0 : i64) : i64
+# LLVM-NEXT:    [[FLOAT_FMT_STR:%.*]] = llvm.getelementptr [[FLOAT_FMT_STR_PTR]][[[C0_i64]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
+# LLVM-NEXT:    [[FLOAT_SPACE_FMT_STR_PTR:%.*]] = llvm.mlir.addressof @"@printf.float.space" : !llvm.ptr
+# LLVM-NEXT:    [[FLOAT_SPACE_FMT_STR:%.*]] = llvm.getelementptr [[FLOAT_SPACE_FMT_STR_PTR]][[[C0_i64]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
+# LLVM-NEXT:    [[NEWLINE_FMT_STR_PTR:%.*]] = llvm.mlir.addressof @"@printf.newline" : !llvm.ptr
+# LLVM-NEXT:    llvm.br ^bb1([[C0]] : i64)
+# LLVM-NEXT:  ^bb1([[IV:%.*]]: i64):  // 2 preds: ^bb0, ^bb5
+# LLVM-NEXT:    [[IV_CMP:%.*]] = llvm.icmp "slt" [[IV]], [[C6]] : i64
+# LLVM-NEXT:    llvm.cond_br [[IV_CMP]], ^bb2, ^bb6
+# LLVM-NEXT:  ^bb2:  // pred: ^bb1
+# LLVM-NEXT:    [[IV_IS_END:%.*]] = llvm.icmp "ne" [[IV]], [[C5]] : i64
+# LLVM-NEXT:    [[PRINT_DATA_PTR:%.*]] = llvm.getelementptr [[DATA_MEMORY]][[[IV]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+# LLVM-NEXT:    [[PRINT_DATA:%.*]] = llvm.load [[PRINT_DATA_PTR]] : !llvm.ptr -> f64
+# LLVM-NEXT:    llvm.cond_br [[IV_IS_END]], ^bb3, ^bb4
+# LLVM-NEXT:  ^bb3:  // pred: ^bb2
+# LLVM-NEXT:    [[PRINTF_RESULT_0:%.*]] = llvm.call @printf([[FLOAT_SPACE_FMT_STR]], [[PRINT_DATA]]) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+# LLVM-NEXT:    llvm.br ^bb5
+# LLVM-NEXT:  ^bb4:  // pred: ^bb2
+# LLVM-NEXT:    [[PRINTF_RESULT_1:%.*]] = llvm.call @printf([[FLOAT_FMT_STR]], [[PRINT_DATA]]) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+# LLVM-NEXT:    llvm.br ^bb5
+# LLVM-NEXT:  ^bb5:  // 2 preds: ^bb3, ^bb4
+# LLVM-NEXT:    [[NEXT_IV:%.*]] = llvm.add [[IV]], [[C1]]  : i64
+# LLVM-NEXT:    llvm.br ^bb1([[NEXT_IV]] : i64)
+# LLVM-NEXT:  ^bb6:  // pred: ^bb1
+# LLVM-NEXT:    [[MALLOCED_MEMORY:%.*]] = llvm.extractvalue [[MEMREF_6]][0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+# LLVM-NEXT:    llvm.call @free([[MALLOCED_MEMORY]]) : (!llvm.ptr) -> ()
+# LLVM-NEXT:    llvm.return
+# LLVM-NEXT:  }
+# LLVM-NEXT:}

@@ -15,24 +15,6 @@ Token *Parser::PrevTok() { return Lexer.PeekPrevToken(); }
 
 Module Parser::Parse() { return parseModule(); }
 
-void Parser::recovery(bool allowFunction) {
-  while (true) {
-    auto peekTok = Peek();
-    if (peekTok->is<Token::Tok_return, Token::Tok_var, Token::Tok_EOF>())
-      return;
-
-    if (allowFunction && peekTok->is<Token::Tok_def>())
-      return;
-
-    if (peekTok->is<Token::Tok_semicolon>()) {
-      Skip();
-      return;
-    }
-
-    Skip();
-  }
-}
-
 Module Parser::parseModule() {
   FixLocationScope scope(*this);
   llvm::SmallVector<Stmt> stmts;
@@ -41,7 +23,7 @@ Module Parser::parseModule() {
     auto funDecl = parseFunctionOrStructDecl();
     if (!funDecl) {
       fail = true;
-      recovery();
+      recovery<Token::Tok_struct, Token::Tok_def>(false);
     }
     stmts.emplace_back(funDecl);
   }
@@ -117,7 +99,7 @@ FuncDecl Parser::parseFunctionDecl() {
 
 #define RECOVERY                                                               \
   fail = true;                                                                 \
-  recovery();                                                                  \
+  recovery<Token::Tok_var>();                                                  \
   continue
 
 StructDecl Parser::parseStructDecl() {
@@ -198,7 +180,7 @@ BlockStmt Parser::parseBlockStmt() {
     auto stmt = parseStmt();
     if (!stmt) {
       fail = true;
-      recovery(false);
+      recovery<Token::Tok_var>();
     }
     stmts.emplace_back(stmt);
   }

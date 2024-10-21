@@ -1,0 +1,40 @@
+# RUN: toyc %s -action=toy | FileCheck %s
+
+struct Struct {
+  var a;
+  var b;
+}
+
+# User defined generic function may operate on struct types as well.
+def multiply_transpose(Struct value) {
+  # We can access the elements of a struct via the '.' operator.
+  return transpose(value.a) * transpose(value.b);
+}
+
+# CHECK-LABEL: toy.func private @multiply_transpose(
+# CHECK-SAME:                                       [[T_ARG_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64> {
+# CHECK-NEXT:    [[T_0:%.*]] = toy.struct_access [[T_ARG_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# CHECK-NEXT:    [[T_1:%.*]] = toy.transpose([[T_0]] : tensor<*xf64>) to tensor<*xf64>
+# CHECK-NEXT:    [[T_2:%.*]] = toy.struct_access [[T_ARG_0]][1] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# CHECK-NEXT:    [[T_3:%.*]] = toy.transpose([[T_2]] : tensor<*xf64>) to tensor<*xf64>
+# CHECK-NEXT:    [[T_4:%.*]] = toy.mul [[T_1]], [[T_3]] : tensor<*xf64>
+# CHECK-NEXT:    toy.return [[T_4]] : tensor<*xf64>
+# CHECK-NEXT:  }
+
+def main() {
+  # We initialize struct values using a composite initializer.
+  Struct value = {[[1, 2, 3], [4, 5, 6]], [[1, 2, 3], [4, 5, 6]]};
+
+  # We pass these arguments to functions like we do with variables.
+  var c = multiply_transpose(value);
+  print(c);
+}
+
+# CHECK-LABEL:  toy.func @main() {
+# CHECK-NEXT:    [[M_0:%.*]] = toy.constant dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+# CHECK-NEXT:    [[M_1:%.*]] = toy.constant dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
+# CHECK-NEXT:    [[M_2:%.*]] = toy.struct_constant [dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>] : !toy.struct<tensor<2x3xf64>, tensor<2x3xf64>>
+# CHECK-NEXT:    [[M_3:%.*]] = toy.generic_call @multiply_transpose([[M_2]]) : (!toy.struct<tensor<2x3xf64>, tensor<2x3xf64>>) -> tensor<*xf64>
+# CHECK-NEXT:    toy.print [[M_3]] : tensor<*xf64>
+# CHECK-NEXT:    toy.return
+# CHECK-NEXT:  }
