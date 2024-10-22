@@ -1,0 +1,40 @@
+# RUN: toyc %s -action=toy | FileCheck %s --check-prefix=TOY 
+# RUN: toyc %s -action=affine | FileCheck %s --check-prefix=AFFINE
+# RUN: toyc %s -action=affine | toy-opt --toy-print-lowering | FileCheck %s --check-prefix=PRINT
+
+
+def main() {
+  print(1);
+}
+
+# TOY-LABEL:  toy.func @main()
+# TOY-NEXT:    %0 = toy.constant dense<1.000000e+00> : tensor<f64>
+# TOY-NEXT:    toy.print %0 : tensor<f64>
+
+# AFFINE-LABEL:  func.func @main()
+# AFFINE-NEXT:    [[ALLOC:%.*]] = memref.alloc() : memref<f64>
+# AFFINE-NEXT:    [[F:%.*]] = arith.constant 1.000000e+00 : f64
+# AFFINE-NEXT:    affine.store [[F]], [[ALLOC]][] : memref<f64>
+# AFFINE-NEXT:    toy.print [[ALLOC]] : memref<f64>
+# AFFINE-NEXT:    memref.dealloc [[ALLOC]] : memref<f64>
+# AFFINE-NEXT:    return
+
+
+
+# PRINT-LABEL: module 
+# PRINT-DAG:  llvm.mlir.global internal constant @"@printf.float"("%f\00") {addr_space = 0 : i32}
+# PRINT-DAG:  llvm.func @printf(!llvm.ptr, ...) -> i32
+# PRINT-NEXT:  func.func @main() {
+# PRINT-NEXT:    [[ALLOC:%.*]] = memref.alloc() : memref<f64>
+# PRINT-NEXT:    [[F1:%.*]] = arith.constant 1.000000e+00 : f64
+# PRINT-NEXT:    affine.store [[F1]], [[ALLOC]][] : memref<f64>
+# PRINT-NEXT:    [[C0:%.*]] = arith.constant 0 : index
+# PRINT-NEXT:    [[C1:%.*]] = arith.constant 1 : index
+# PRINT-NEXT:    [[FLOAT_FMT_STR_PTR:%.*]] = llvm.mlir.addressof @"@printf.float" : !llvm.ptr
+# PRINT-NEXT:    [[C0_i64:%.*]] = llvm.mlir.constant(0 : i64) : i64
+# PRINT-NEXT:    [[FLOAG_FMT_STR:%.*]] = llvm.getelementptr [[FLOAT_FMT_STR_PTR]][[[C0_i64]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<3 x i8>
+# PRINT-NEXT:    [[DATA:%.*]] = memref.load [[ALLOC]][] : memref<f64>
+# PRINT-NEXT:    [[PRINTF_RESULT:%.*]] = llvm.call @printf([[FLOAG_FMT_STR]], [[DATA]]) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+# PRINT-NEXT:    memref.dealloc [[ALLOC]] : memref<f64>
+# PRINT-NEXT:    return
+

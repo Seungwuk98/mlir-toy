@@ -97,6 +97,15 @@ struct PrintOpToLLVMLowering : public OpConversionPattern<PrintOp> {
 
     auto floatFmt =
         getOrInsertGlobalString(rewriter, module, op->getLoc(), FLOAT);
+
+    if (shape.empty()) {
+      auto load = rewriter.create<memref::LoadOp>(op->getLoc(), input);
+      rewriter.create<LLVM::CallOp>(op->getLoc(), printfType, printf,
+                                    ValueRange{floatFmt, load});
+      rewriter.eraseOp(op);
+      return success();
+    }
+
     auto floatSpaceFmt =
         getOrInsertGlobalString(rewriter, module, op->getLoc(), FLOAT_SPACE);
     auto newline =
