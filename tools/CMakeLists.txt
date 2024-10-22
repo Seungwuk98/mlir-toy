@@ -41,3 +41,6 @@ target_link_libraries(
 )
 
 set(TOY_TOOLS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "")
+
+install(TARGETS toyc DESTINATION bin)
+install(TARGETS toy-opt DESTINATION bin)
