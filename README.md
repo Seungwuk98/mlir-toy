@@ -61,6 +61,15 @@ $ alias toyc=/path/to/mlir-toy/build/tools/toyc
 $ alias toy-opt=/path/to/mlir-toy/build/tools/toy-opt
 ```
 
+### Docker 
+
+`Dockerfile` is already provided in this project. You can build docker image by running the following commands. 
+
+```bash 
+mlir-toy$ docker build -t mlir-toy -f scripts/toy.dockerfile .
+mlir-toy$ docker run -it --rm mlir-toy
+```
+
 
 ## Run 
 
