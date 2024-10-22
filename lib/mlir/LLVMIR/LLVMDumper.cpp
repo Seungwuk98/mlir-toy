@@ -34,7 +34,10 @@ LogicalResult LLVMDumper::RunJIT(ModuleOp module) {
   options.transformer = optPipeline;
 
   auto engineOpt = ExecutionEngine::create(module, options);
-  assert(engineOpt && "Failed to construct a execution engine");
+  if (!engineOpt) {
+    Err << "Failed to create a execution engine\n";
+    return failure();
+  }
   auto *engine = engineOpt->get();
 
   auto invokationResult = engine->invokePacked("main");

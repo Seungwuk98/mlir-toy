@@ -12,6 +12,7 @@ add_dependencies(ToyMLIRPass ToyCombineIncGen)
 target_link_libraries(
   ToyMLIRPass 
   PRIVATE 
+  ToyDialect
   MLIRTransforms
   MLIRArithDialect
   MLIRAffineDialect

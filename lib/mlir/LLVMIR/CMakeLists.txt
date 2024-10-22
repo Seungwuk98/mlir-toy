@@ -10,7 +10,6 @@ target_link_libraries(
   ToyLLVMDumper
 
   PRIVATE 
-  ${LLVM_TARGET_SPECIFIC_LIBS}
   MLIRTargetLLVMIRExport
   MLIRExecutionEngine
 )
