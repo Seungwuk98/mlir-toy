@@ -1,0 +1,19 @@
+# RUN: toyc %s -action=toy | FileCheck %s --check-prefix=TOY 
+# RUN: toyc %s -action=toy | toy-opt --canonicalize | FileCheck %s --check-prefix=CAN
+
+def transpose_transpose(a) {
+  return transpose(transpose(a));
+}
+
+
+# TOY-LABEL: toy.func private @transpose_transpose(
+# TOY-SAME:                                        [[ARG_0:%.*]]: tensor<*xf64>) -> tensor<*xf64>
+# TOY-NEXT:   [[TRANSPOSE_0:%.*]] = toy.transpose([[ARG_0]] : tensor<*xf64>) to tensor<*xf64>
+# TOY-NEXT:   [[TRANSPOSE_1:%.*]] = toy.transpose([[TRANSPOSE_0]] : tensor<*xf64>) to tensor<*xf64>
+# TOY-NEXT:   toy.return [[TRANSPOSE_1]] : tensor<*xf64>
+
+# CAN-LABEL: toy.func private @transpose_transpose(
+# CAN-SAME:                                        [[ARG_0:%.*]]: tensor<*xf64>) -> tensor<*xf64>
+# CAN-NEXT:   toy.return [[ARG_0]] : tensor<*xf64>
+
+

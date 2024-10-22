@@ -1,0 +1,49 @@
+# RUN: toyc %s -action=toy | FileCheck %s --check-prefix=TOY 
+# RUN: toyc %s -action=toy | toy-opt --inline | FileCheck %s --check-prefix=INLINE
+
+struct X {
+  var x;
+  var y;
+}
+
+def multiply_x(X a, X b) {
+  return a.x * b.x;
+}
+
+# TOY-LABEL: toy.func private @multiply_x(
+# TOY-SAME:                               [[ARG_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>, [[ARG_1:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64> 
+# TOY-NEXT:   [[ACCESS_0:%.*]] = toy.struct_access [[ARG_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# TOY-NEXT:   [[ACCESS_1:%.*]] = toy.struct_access [[ARG_1]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# TOY-NEXT:   [[MUL:%.*]] = toy.mul [[ACCESS_0]], [[ACCESS_1]] : tensor<*xf64>
+# TOY-NEXT:   toy.return [[MUL]] : tensor<*xf64>
+
+def main() {
+  X a = {[1, 2, 3], [4, 5, 6]};
+  X b = {[7, 8, 9], [10, 11, 12]};
+  var c = multiply_x(a, b);
+  print(c);
+}
+
+
+# TOY-LABEL: toy.func @main() 
+# TOY-NEXT:   [[CONSTANT_0:%.*]] = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>
+# TOY-NEXT:   [[CONSTANT_1:%.*]] = toy.constant dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>
+# TOY-NEXT:   [[STRUCT_0:%.*]] = toy.struct_constant [dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>, dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+# TOY-NEXT:   [[CONSTANT_2:%.*]] = toy.constant dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>
+# TOY-NEXT:   [[CONSTANT_3:%.*]] = toy.constant dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>
+# TOY-NEXT:   [[STRUCT_1:%.*]] = toy.struct_constant [dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>, dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+# TOY-NEXT:   [[CALL:%.*]] = toy.generic_call @multiply_x([[STRUCT_0]], [[STRUCT_1]]) : (!toy.struct<tensor<3xf64>, tensor<3xf64>>, !toy.struct<tensor<3xf64>, tensor<3xf64>>) -> tensor<*xf64>
+# TOY-NEXT:   toy.print [[CALL]] : tensor<*xf64>
+# TOY-NEXT:   toy.return
+
+
+# INLINE-LABEL: toy.func @main() 
+# INLINE-NEXT:   [[STRUCT_0:%.*]] = toy.struct_constant [dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf64>, dense<[4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+# INLINE-NEXT:   [[STRUCT_1:%.*]] = toy.struct_constant [dense<[7.000000e+00, 8.000000e+00, 9.000000e+00]> : tensor<3xf64>, dense<[1.000000e+01, 1.100000e+01, 1.200000e+01]> : tensor<3xf64>] : !toy.struct<tensor<3xf64>, tensor<3xf64>>
+# INLINE-NEXT:   [[CAST_0:%.*]] = toy.cast [[STRUCT_0]] : !toy.struct<tensor<3xf64>, tensor<3xf64>> to !toy.struct<tensor<*xf64>, tensor<*xf64>>
+# INLINE-NEXT:   [[CAST_1:%.*]] = toy.cast [[STRUCT_1]] : !toy.struct<tensor<3xf64>, tensor<3xf64>> to !toy.struct<tensor<*xf64>, tensor<*xf64>>
+# INLINE-NEXT:   [[ACCESS_0:%.*]] = toy.struct_access [[CAST_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# INLINE-NEXT:   [[ACCESS_1:%.*]] = toy.struct_access [[CAST_1]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
+# INLINE-NEXT:   [[MUL:%.*]] = toy.mul [[ACCESS_0]], [[ACCESS_1]] : tensor<*xf64>
+# INLINE-NEXT:   toy.print [[MUL]] : tensor<*xf64>
+# INLINE-NEXT:   toy.return

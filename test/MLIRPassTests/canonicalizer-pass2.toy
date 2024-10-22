@@ -1,0 +1,23 @@
+# RUN: toyc %s -action=toy | FileCheck %s --check-prefix=TOY 
+# RUN: toyc %s -action=toy | toy-opt --canonicalize | FileCheck %s --check-prefix=CAN 
+
+
+def main() {
+  var a<2, 1> = [1, 2];
+  var b<2, 1> = a;
+  var c<2, 1> = b;
+  print(c);
+}
+
+# TOY-LABEL: toy.func @main() 
+# TOY-NEXT:   [[ALLOC_CONSTANT:%.*]] = toy.constant dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+# TOY-NEXT:   [[RESHAPE_0:%.*]] = toy.reshape([[ALLOC_CONSTANT]] : tensor<2xf64>) to tensor<2x1xf64>
+# TOY-NEXT:   [[RESHAPE_1:%.*]] = toy.reshape([[RESHAPE_0]] : tensor<2x1xf64>) to tensor<2x1xf64>
+# TOY-NEXT:   [[RESHAPE_2:%.*]] = toy.reshape([[RESHAPE_1]] : tensor<2x1xf64>) to tensor<2x1xf64>
+# TOY-NEXT:   toy.print [[RESHAPE_2]] : tensor<2x1xf64>
+# TOY-NEXT:   toy.return
+
+# CAN-LABEL: toy.func @main() 
+# CAN-NEXT:   [[ALLOC_CONSTANT:%.*]] = toy.constant dense<{{\[\[}}1.000000e+00], [2.000000e+00]]> : tensor<2x1xf64>
+# CAN-NEXT:   toy.print [[ALLOC_CONSTANT]] : tensor<2x1xf64>
+# CAN-NEXT:   toy.return 
