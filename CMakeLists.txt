@@ -33,4 +33,7 @@ include_directories(${PROJECT_BINARY_DIR}/include)
 add_subdirectory(lib)
 add_subdirectory(include)
 add_subdirectory(tools)
-add_subdirectory(test)
+
+if (TOY_ENABLE_TEST)
+  add_subdirectory(test)
+endif()
